@@ -1,0 +1,25 @@
+id: refine-friction-patterns
+title: Refine friction patterns and add CLAUDE.md
+assumptions:
+  retire: []
+  create: []
+  reviewed:
+    - id: two-scope-pattern-files
+      outcome: unchanged
+      reason: Only regex line content changes; the two-file, one-regex-per-line,
+        no-metadata layout is preserved.
+    - id: scope-pattern-loader
+      outcome: unchanged
+      reason: Loader still compiles each non-empty line case-insensitively; refined
+        patterns stay RE2-safe with no backreferences or lookaround.
+    - id: local-aggregate-privacy
+      outcome: unchanged
+      reason: Pattern edits and the new CLAUDE.md add no raw-text storage; logs stay
+        aggregate-only.
+anchors: {}
+files:
+  - patterns/en/user-patterns.md
+  - patterns/en/assistant-patterns.md
+  - CLAUDE.md
+applied:
+  applied_at: 2026-06-08T07:10:10.008Z
