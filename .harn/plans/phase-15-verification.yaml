@@ -1,0 +1,68 @@
+id: phase-15-verification
+title: Add end-to-end verification
+assumptions:
+  retire: []
+  create:
+    - id: end-to-end-verification
+      title: End-to-end verification
+      statement: The test suite exercises live hook aggregation, combined Codex and
+        Claude backfill, report percentages, and the local dashboard API against
+        one temporary aggregate store, so the v1 workflow is verified across its
+        main user-facing commands without persisting raw transcript data.
+      reason: Phase 15 closes the implementation with an integration-level check
+        before packaging and manual server verification.
+      depends_on:
+        - codex-live-hook-counting
+        - claude-live-hook-counting
+        - codex-historical-backfill
+        - claude-historical-backfill
+        - daily-report-percentages
+        - local-dashboard-server
+        - aggregate-only-safety-checks
+  reviewed:
+    - id: codex-live-hook-counting
+      outcome: unchanged
+      reason: Phase 15 simulates live hook counting without changing hook
+        normalization.
+    - id: claude-live-hook-counting
+      outcome: unchanged
+      reason: Phase 15 includes existing Claude hook coverage without changing hook
+        normalization.
+    - id: codex-historical-backfill
+      outcome: unchanged
+      reason: Phase 15 uses existing Codex backfill behavior in the integration test.
+    - id: claude-historical-backfill
+      outcome: unchanged
+      reason: Phase 15 uses existing Claude backfill behavior in the integration test.
+    - id: daily-report-percentages
+      outcome: unchanged
+      reason: Phase 15 reads existing report rows and output.
+    - id: local-dashboard-server
+      outcome: unchanged
+      reason: Phase 15 checks the existing dashboard API.
+    - id: aggregate-only-safety-checks
+      outcome: unchanged
+      reason: Phase 15 verifies no raw fixture text appears in stored logs or API
+        output.
+anchors:
+  end-to-end-verification:
+    integration-tests:
+      action: change
+      reason: Add simulated workflow coverage across hooks, backfill, report, and
+        server API.
+    progress-phase-15:
+      action: change
+      reason: Track final verification completion.
+  aggregate-only-safety-checks:
+    progress-phase-14:
+      action: change
+      reason: Replace the Phase 14 placeholder with its actual commit hash.
+  local-aggregate-privacy:
+    progress-privacy-storage:
+      action: keep
+      reason: Privacy assumption remains unchanged.
+files:
+  - test/integration.test.js
+  - simple-hook-telemetry-progress.md
+applied:
+  applied_at: 2026-06-08T05:53:43.084Z

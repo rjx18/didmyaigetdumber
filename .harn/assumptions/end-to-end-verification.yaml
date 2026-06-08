@@ -1,0 +1,17 @@
+id: end-to-end-verification
+hash: a-9334658470d7
+title: End-to-end verification
+state: active
+statement: The test suite exercises live hook aggregation, combined Codex and
+  Claude backfill, report percentages, and the local dashboard API against one
+  temporary aggregate store, so the v1 workflow is verified across its main
+  user-facing commands without persisting raw transcript data.
+depends_on:
+  - codex-live-hook-counting
+  - claude-live-hook-counting
+  - codex-historical-backfill
+  - claude-historical-backfill
+  - daily-report-percentages
+  - local-dashboard-server
+  - aggregate-only-safety-checks
+created_by: phase-15-verification

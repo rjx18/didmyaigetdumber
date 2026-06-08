@@ -62,6 +62,8 @@
 | 13. Doctor command | `phase-13-doctor-command` | complete | `393d1ab` | Pattern, log path, lock, and hook checks. |
 <!-- harn:end doctor-health-checks -->
 <!-- harn:assume aggregate-only-safety-checks ref=progress-phase-14 -->
-| 14. Privacy and safety review | `phase-14-privacy-review` | complete | phase commit | Verify no raw text/path/command storage. |
+| 14. Privacy and safety review | `phase-14-privacy-review` | complete | `02c85a9` | Verify no raw text/path/command storage. |
 <!-- harn:end aggregate-only-safety-checks -->
-| 15. Verification | pending | pending | pending | End-to-end simulated hooks/backfill/report/server checks. |
+<!-- harn:assume end-to-end-verification ref=progress-phase-15 -->
+| 15. Verification | `phase-15-verification` | complete | phase commit | End-to-end simulated hooks/backfill/report/server checks. |
+<!-- harn:end end-to-end-verification -->
