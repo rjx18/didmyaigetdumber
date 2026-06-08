@@ -1,0 +1,70 @@
+id: phase-7-claude-hooks
+title: Add Claude Code live hook adapter
+assumptions:
+  retire: []
+  create:
+    - id: claude-live-hook-counting
+      title: Claude Code live hook counting
+      statement: Claude Code live hook payloads are normalized from hook event names
+        and counted through the shared pattern and daily-log increment path, so
+        user prompts, visible assistant messages, tools, permissions, and
+        runtime failures update aggregate logs without live transcript parsing.
+      reason: Claude Code support is a core v1 integration and must share the same
+        privacy-preserving storage behavior as Codex.
+      depends_on:
+        - normalized-event-increments
+        - daily-log-locking
+        - scope-pattern-loader
+        - npm-cli-entrypoint
+  reviewed:
+    - id: codex-live-hook-counting
+      outcome: unchanged
+      reason: Phase 7 extends the shared hook runner without changing Codex
+        normalization behavior.
+    - id: normalized-event-increments
+      outcome: unchanged
+      reason: Phase 7 consumes the normalized increment model.
+    - id: local-aggregate-privacy
+      outcome: unchanged
+      reason: Phase 7 ignores transcript paths during live hooks and writes aggregates
+        only.
+anchors:
+  claude-live-hook-counting:
+    claude-adapter:
+      action: change
+      reason: Normalize Claude Code hook payloads.
+    hook-agent-routing:
+      action: change
+      reason: Route hook payloads to Codex or Claude adapters.
+    claude-init:
+      action: change
+      reason: Merge Claude Code hook commands into user settings.
+    claude-hook-tests:
+      action: change
+      reason: Verify Claude normalization, hook counting, and settings merge behavior.
+    progress-phase-7:
+      action: change
+      reason: Track Phase 7 completion.
+  codex-live-hook-counting:
+    hook-runner:
+      action: change
+      reason: Hook runner needs agent routing while preserving Codex behavior.
+    progress-phase-6:
+      action: keep
+      reason: Codex progress remains unchanged.
+  normalized-event-increments:
+    progress-phase-5:
+      action: keep
+      reason: Event model progress remains unchanged.
+  local-aggregate-privacy:
+    progress-privacy-storage:
+      action: keep
+      reason: Privacy assumption remains unchanged.
+files:
+  - src/adapters/claude.js
+  - src/hook.js
+  - src/init/claude.js
+  - test/claude.test.js
+  - simple-hook-telemetry-progress.md
+applied:
+  applied_at: 2026-06-08T05:06:11.830Z
