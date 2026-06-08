@@ -1,0 +1,15 @@
+id: historical-backfill-numeric-metrics
+hash: a-444576e635e3
+title: Historical backfill numeric metrics
+state: active
+statement: Codex and Claude historical backfill run the shared numeric
+  transcript extractors over parsed JSONL records and merge the resulting schema
+  v2 increments into the same date-grouped daily writes as existing pattern
+  counters, so historical logs can seed token, tool, timing, window, turn, and
+  compaction metrics without storing raw transcript content.
+depends_on:
+  - numeric-transcript-extractors
+  - backfill-idempotent-writes
+  - daily-metrics-log-schema
+  - local-aggregate-privacy
+created_by: metrics-phase-4-backfill-metrics

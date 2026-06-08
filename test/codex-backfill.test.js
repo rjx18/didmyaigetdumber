@@ -63,6 +63,16 @@ test('backfills sanitized Codex JSONL records into aggregate daily logs', () => 
       payload: { timestamp: '2026-06-08T01:00:00.000Z' },
     },
     {
+      timestamp: '2026-06-08T01:00:10.000Z',
+      type: 'turn_context',
+      payload: { model: 'gpt-5.4', cwd: '/private/project' },
+    },
+    {
+      timestamp: '2026-06-08T01:00:30.000Z',
+      type: 'event_msg',
+      payload: { type: 'task_started' },
+    },
+    {
       timestamp: '2026-06-08T01:01:00.000Z',
       type: 'event_msg',
       payload: { type: 'user_message', message: "this is wrong and I don't want that" },
@@ -88,9 +98,33 @@ test('backfills sanitized Codex JSONL records into aggregate daily logs', () => 
       payload: { type: 'function_call_output', output: 'ignored output text', call_id: 'call-1' },
     },
     {
+      timestamp: '2026-06-08T01:05:30.000Z',
+      type: 'event_msg',
+      payload: {
+        type: 'token_count',
+        info: {
+          last_token_usage: {
+            input_tokens: 120,
+            cached_input_tokens: 30,
+            output_tokens: 40,
+            reasoning_output_tokens: 8,
+            total_tokens: 190,
+          },
+        },
+        rate_limits: {
+          primary: { used_percent: 25, window_minutes: 300, resets_at: 1780901738 },
+        },
+      },
+    },
+    {
       timestamp: '2026-06-08T01:06:00.000Z',
       type: 'event_msg',
       payload: { type: 'turn_aborted', reason: 'cancelled' },
+    },
+    {
+      timestamp: '2026-06-08T01:07:00.000Z',
+      type: 'event_msg',
+      payload: { type: 'task_complete' },
     },
   ], ['{not valid json']);
 
@@ -109,10 +143,23 @@ test('backfills sanitized Codex JSONL records into aggregate daily logs', () => 
   assert.equal(log.totals.runtime_interrupts, 1);
   assert.equal(log.matches.user_1pt.events, 1);
   assert.equal(log.matches.assistant_1pt.events, 1);
+  assert.equal(log.tokens.input, 120);
+  assert.equal(log.tokens.cache_read, 30);
+  assert.equal(log.tokens.reasoning_output, 8);
+  assert.equal(log.model_tokens['gpt-5.4'].total, 190);
+  assert.equal(log.tool_calls_by_name.tool, 1);
+  assert.equal(log.tool_calls_by_name.web_search, 1);
+  assert.equal(log.tool_output_chars.tool, 'ignored output text'.length);
+  assert.equal(log.timings_ms.turn_count, 1);
+  assert.equal(log.timings_ms.tool_latency_count, 1);
+  assert.equal(log.windows[0].kind, '5h');
+  assert.equal(log.windows[0].tokens_in_window, 190);
+  assert.equal(log.totals.turns, 1);
   assert.equal(serialized.includes("don't want"), false);
   assert.equal(serialized.includes('good catch'), false);
   assert.equal(serialized.includes('ignored command text'), false);
   assert.equal(serialized.includes('ignored output text'), false);
+  assert.equal(serialized.includes('/private/project'), false);
 });
 
 test('runs Codex backfill through dispatcher and init backfill flag', async () => {

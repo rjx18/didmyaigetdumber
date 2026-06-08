@@ -24,9 +24,11 @@
 | 2. Schema v2 merge primitives | `metrics-phase-2-schema-v2` | complete | `d7de86d` | Add metric blocks and window sample storage. |
 <!-- harn:end daily-metrics-log-schema -->
 <!-- harn:assume numeric-transcript-extractors ref=progress-phase-3 -->
-| 3. Shared numeric extractors | `metrics-phase-3-numeric-extractors` | complete | phase commit | Parse Codex/Claude numeric fields without raw content. |
+| 3. Shared numeric extractors | `metrics-phase-3-numeric-extractors` | complete | `88deb65` | Parse Codex/Claude numeric fields without raw content. |
 <!-- harn:end numeric-transcript-extractors -->
-| 4. Backfill metrics | pending | pending | pending | Populate metrics from historical transcripts. |
+<!-- harn:assume historical-backfill-numeric-metrics ref=progress-phase-4 -->
+| 4. Backfill metrics | `metrics-phase-4-backfill-metrics` | complete | phase commit | Populate metrics from historical transcripts. |
+<!-- harn:end historical-backfill-numeric-metrics -->
 | 5. Offset tail store | pending | pending | pending | Persist per-session byte offsets. |
 | 6. Live hook tail integration | pending | pending | pending | Tail active transcripts from low-frequency hooks. |
 | 7. Local backend API | pending | pending | pending | Return aggregate metrics JSON for future frontend. |

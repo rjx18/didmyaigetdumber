@@ -7,6 +7,7 @@ const { incrementFromEvent } = require('../events');
 const { emptyIncrement, localDate } = require('../log-store');
 const { matchPatterns, loadPatterns } = require('../patterns');
 const { groupIncrement, writeBackfillDays } = require('../backfill');
+const { extractClaudeMetrics } = require('../extractors/claude');
 
 const SELF_PROJECT_PATTERN = /didmyaigetdumber/i;
 
@@ -109,6 +110,19 @@ function runtimeIncrement() {
   return countedIncrement('runtime_interrupts', 1);
 }
 
+function hasMetricData(increment) {
+  return increment.totals.turns > 0
+    || increment.totals.compactions > 0
+    || Object.values(increment.tokens).some((value) => value > 0)
+    || Object.keys(increment.tool_output_chars).length > 0
+    || Object.keys(increment.tool_calls_by_name).length > 0
+    || Object.keys(increment.tool_failures_by_name).length > 0
+    || Object.keys(increment.model_tokens).length > 0
+    || Object.values(increment.timings_ms).some((value) => value > 0)
+    || Object.keys(increment.tool_latency_ms_by_name).length > 0
+    || increment.windows.length > 0;
+}
+
 // harn:assume claude-historical-backfill ref=claude-backfill-parser
 function collectClaudeBackfill(options = {}) {
   const projectsDir = options.claudeProjectsDir || options.projectsDir || defaultClaudeProjectsDir();
@@ -135,6 +149,7 @@ function collectClaudeBackfill(options = {}) {
     const fallbackDate = dateFromFilePath(filePath);
     let sessionDate = fallbackDate;
     let countableRecords = 0;
+    const parsedRecords = [];
 
     summary.files += 1;
     for (const line of fs.readFileSync(filePath, 'utf8').split(/\r?\n/)) {
@@ -151,6 +166,7 @@ function collectClaudeBackfill(options = {}) {
       }
 
       summary.records += 1;
+      parsedRecords.push(record);
       const message = record.message || {};
       const date = recordDate(record, filePath, fallbackDate);
       sessionDate ||= date;
@@ -192,6 +208,13 @@ function collectClaudeBackfill(options = {}) {
     if (countableRecords > 0) {
       groupIncrement(dayMap, sessionDate || localDate(), sessionIncrement());
     }
+
+    // harn:assume historical-backfill-numeric-metrics ref=claude-backfill-metrics
+    const metricsIncrement = extractClaudeMetrics(parsedRecords);
+    if (hasMetricData(metricsIncrement)) {
+      groupIncrement(dayMap, sessionDate || fallbackDate || localDate(), metricsIncrement);
+    }
+    // harn:end historical-backfill-numeric-metrics
   }
 
   return { dayMap, summary };

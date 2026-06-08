@@ -71,15 +71,18 @@ test('backfills sanitized Claude JSONL records into aggregate daily logs', () =>
       type: 'assistant',
       message: {
         role: 'assistant',
-        content: [{ type: 'text', text: 'my mistake, good catch' }],
-      },
-    },
-    {
-      timestamp: '2026-06-08T01:02:00.000Z',
-      type: 'assistant',
-      message: {
-        role: 'assistant',
-        content: [{ type: 'tool_use', name: 'Bash', input: { command: 'ignored command text' } }],
+        model: 'hf:moonshotai/Kimi-K2.6',
+        usage: {
+          input_tokens: 210,
+          cache_creation_input_tokens: 10,
+          cache_read_input_tokens: 40,
+          output_tokens: 50,
+        },
+        content: [
+          { type: 'text', text: 'my mistake, good catch' },
+          { type: 'thinking', thinking: 'ignored thinking text' },
+          { type: 'tool_use', id: 'toolu-1', name: 'Bash', input: { command: 'ignored command text' } },
+        ],
       },
     },
     {
@@ -87,7 +90,7 @@ test('backfills sanitized Claude JSONL records into aggregate daily logs', () =>
       type: 'user',
       message: {
         role: 'user',
-        content: [{ type: 'tool_result', content: 'ignored output text', is_error: true }],
+        content: [{ type: 'tool_result', tool_use_id: 'toolu-1', content: 'ignored output text', is_error: true }],
       },
     },
     {
@@ -115,8 +118,21 @@ test('backfills sanitized Claude JSONL records into aggregate daily logs', () =>
   assert.equal(log.totals.runtime_interrupts, 1);
   assert.equal(log.matches.user_1pt.events, 1);
   assert.equal(log.matches.assistant_1pt.events, 1);
+  assert.equal(log.tokens.input, 210);
+  assert.equal(log.tokens.cache_creation, 10);
+  assert.equal(log.tokens.cache_read, 40);
+  assert.equal(log.tokens.output, 50);
+  assert.equal(log.tokens.thinking_chars, 'ignored thinking text'.length);
+  assert.equal(log.model_tokens['hf:moonshotai/Kimi-K2.6'].output, 50);
+  assert.equal(log.tool_calls_by_name.Bash, 1);
+  assert.equal(log.tool_output_chars.Bash, 'ignored output text'.length);
+  assert.equal(log.tool_failures_by_name.Bash, 1);
+  assert.equal(log.timings_ms.turn_count, 1);
+  assert.equal(log.timings_ms.tool_latency_count, 1);
+  assert.equal(log.totals.turns, 1);
   assert.equal(serialized.includes("don't want"), false);
   assert.equal(serialized.includes('good catch'), false);
+  assert.equal(serialized.includes('ignored thinking text'), false);
   assert.equal(serialized.includes('ignored command text'), false);
   assert.equal(serialized.includes('ignored output text'), false);
   assert.equal(serialized.includes('ignored error text'), false);

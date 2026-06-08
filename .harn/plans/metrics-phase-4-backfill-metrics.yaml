@@ -1,0 +1,79 @@
+id: metrics-phase-4-backfill-metrics
+title: Wire numeric metrics into historical backfill
+assumptions:
+  retire: []
+  create:
+    - id: historical-backfill-numeric-metrics
+      title: Historical backfill numeric metrics
+      statement: Codex and Claude historical backfill run the shared numeric
+        transcript extractors over parsed JSONL records and merge the resulting
+        schema v2 increments into the same date-grouped daily writes as existing
+        pattern counters, so historical logs can seed token, tool, timing,
+        window, turn, and compaction metrics without storing raw transcript
+        content.
+      reason: Metrics need reproducible historical data before live hook tailing is
+        enabled.
+      depends_on:
+        - numeric-transcript-extractors
+        - backfill-idempotent-writes
+        - daily-metrics-log-schema
+        - local-aggregate-privacy
+  reviewed:
+    - id: codex-historical-backfill
+      outcome: unchanged
+      reason: Codex backfill still parses aggregate pattern/session/tool/runtime
+        counters, now with numeric metrics merged alongside them.
+    - id: claude-historical-backfill
+      outcome: unchanged
+      reason: Claude backfill still parses aggregate pattern/session/tool/runtime
+        counters, now with numeric metrics merged alongside them.
+    - id: numeric-transcript-extractors
+      outcome: unchanged
+      reason: Backfill consumes extractor output without changing extractor privacy
+        semantics.
+    - id: backfill-idempotent-writes
+      outcome: unchanged
+      reason: Existing skip/overwrite behavior and grouped daily writes remain the
+        same.
+    - id: local-aggregate-privacy
+      outcome: unchanged
+      reason: Backfilled metric fields are numeric aggregates and safe labels only.
+anchors:
+  historical-backfill-numeric-metrics:
+    codex-backfill-metrics:
+      action: change
+      reason: Merge Codex numeric extractor output into grouped daily increments.
+    claude-backfill-metrics:
+      action: change
+      reason: Merge Claude numeric extractor output into grouped daily increments.
+    backfill-metrics-tests:
+      action: change
+      reason: Verify historical backfills populate numeric schema v2 fields without
+        raw content.
+    progress-phase-4:
+      action: change
+      reason: Track Phase 4 implementation status.
+  codex-historical-backfill:
+    codex-backfill-parser:
+      action: change
+      reason: Collect parsed records and merge numeric metrics after existing Codex
+        aggregate parsing.
+    codex-backfill-tests:
+      action: change
+      reason: Assert Codex metric fields from sanitized transcripts.
+  claude-historical-backfill:
+    claude-backfill-parser:
+      action: change
+      reason: Collect parsed records and merge numeric metrics after existing Claude
+        aggregate parsing.
+    claude-backfill-tests:
+      action: change
+      reason: Assert Claude metric fields from sanitized transcripts.
+files:
+  - src/backfills/codex.js
+  - src/backfills/claude.js
+  - test/codex-backfill.test.js
+  - test/claude-backfill.test.js
+  - metrics-hooks-backend-progress.md
+applied:
+  applied_at: 2026-06-08T15:08:45.192Z
