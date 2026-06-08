@@ -1,0 +1,16 @@
+id: record-profanity-patterns
+title: Record curated user profanity patterns as reference
+assumptions:
+  retire: []
+  create: []
+  reviewed:
+    - id: two-scope-pattern-files
+      outcome: unchanged
+      reason: user-profanity.md is stored as reference text only and is not wired into
+        the scope loader, which still maps exactly the user and assistant scope
+        files for matching and reporting.
+anchors: {}
+files:
+  - patterns/en/user-profanity.md
+applied:
+  applied_at: 2026-06-08T08:05:27.844Z
