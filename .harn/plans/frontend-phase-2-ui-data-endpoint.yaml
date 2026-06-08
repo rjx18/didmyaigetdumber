@@ -1,0 +1,66 @@
+id: frontend-phase-2-ui-data-endpoint
+title: Add aggregate UI data endpoint
+assumptions:
+  retire: []
+  create:
+    - id: ui-aggregate-data-endpoint
+      title: UI aggregate data endpoint
+      statement: The server assembles one aggregate-only dashboard payload from the
+        daily logs over a day range and serves it at `GET /api/ui?days=N`,
+        containing per-day friction (total/user/assistant and 1pt/2pt severity),
+        activity, token totals and composition, cache ratio, reasoning/thinking
+        share, timing series, plus range-aggregated tool mix, model token
+        totals, and Codex window samples, while excluding raw text, file paths,
+        command text, source excerpts, and token content.
+      reason: The dashboard needs one live, frontend-shaped data source to replace the
+        synthetic data.js.
+      depends_on:
+        - local-metrics-api
+        - daily-report-percentages
+        - local-aggregate-privacy
+        - local-dashboard-server
+  reviewed:
+    - id: local-metrics-api
+      outcome: unchanged
+      reason: The UI payload reuses metricsForLog derivations; the metrics endpoint is
+        unchanged.
+    - id: local-aggregate-privacy
+      outcome: unchanged
+      reason: The payload is allowlisted numeric aggregates and safe tool/model labels
+        only.
+    - id: local-dashboard-server
+      outcome: unchanged
+      reason: A new aggregate route is added without changing existing routes.
+    - id: aggregate-only-safety-checks
+      outcome: unchanged
+      reason: Privacy tests are extended to prove /api/ui excludes raw content.
+anchors:
+  ui-aggregate-data-endpoint:
+    ui-data-builder:
+      action: change
+      reason: Build the frontend-shaped aggregate payload from daily logs.
+    server-ui-api:
+      action: change
+      reason: Serve the payload at GET /api/ui.
+    ui-data-tests:
+      action: change
+      reason: Verify payload shape, derived fields, and empty-range behavior.
+    progress-phase-2:
+      action: change
+      reason: Track Phase 2 implementation status.
+  local-dashboard-server:
+    server-http:
+      action: change
+      reason: Nest the new /api/ui route inside the request handler.
+  aggregate-only-safety-checks:
+    privacy-tests:
+      action: change
+      reason: Extend privacy coverage to the /api/ui payload.
+files:
+  - src/ui-data.js
+  - src/server.js
+  - test/ui-data.test.js
+  - test/privacy.test.js
+  - frontend-dashboard-progress.md
+applied:
+  applied_at: 2026-06-08T17:59:18.548Z

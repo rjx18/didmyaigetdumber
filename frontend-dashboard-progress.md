@@ -17,7 +17,9 @@ Implements `tmp/plan/frontend-dashboard.md`: ship the `ai tracker` mockup as the
 <!-- harn:assume ui-static-asset-serving ref=progress-phase-1 -->
 | 1. Vendor assets + static serving | `frontend-phase-1-static-serving` | complete | phase commit | Serve `src/ui/` static files; replace inline `dashboardHtml()`. |
 <!-- harn:end ui-static-asset-serving -->
-| 2. Aggregate UI data endpoint | `frontend-phase-2-ui-data-endpoint` | planned | — | `GET /api/ui?days=N` aggregate-only payload. |
+<!-- harn:assume ui-aggregate-data-endpoint ref=progress-phase-2 -->
+| 2. Aggregate UI data endpoint | `frontend-phase-2-ui-data-endpoint` | complete | phase commit | `GET /api/ui?days=N` aggregate-only payload. |
+<!-- harn:end ui-aggregate-data-endpoint -->
 | 3. Wire live data into the UI | `frontend-phase-3-live-data` | planned | — | Replace synthetic `data.js`; loading/empty states. |
 | 4. Close metric gaps / prune | `frontend-phase-4-metric-gaps` | planned | — | Friction tiers; remove unsupported elements. |
 | 5. Polish, offline + start wiring | `frontend-phase-5-polish` | planned | — | Fonts, responsive, docs. |

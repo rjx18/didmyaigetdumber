@@ -1,0 +1,17 @@
+id: ui-aggregate-data-endpoint
+hash: a-28ee90e84931
+title: UI aggregate data endpoint
+state: active
+statement: The server assembles one aggregate-only dashboard payload from the
+  daily logs over a day range and serves it at `GET /api/ui?days=N`, containing
+  per-day friction (total/user/assistant and 1pt/2pt severity), activity, token
+  totals and composition, cache ratio, reasoning/thinking share, timing series,
+  plus range-aggregated tool mix, model token totals, and Codex window samples,
+  while excluding raw text, file paths, command text, source excerpts, and token
+  content.
+depends_on:
+  - local-metrics-api
+  - daily-report-percentages
+  - local-aggregate-privacy
+  - local-dashboard-server
+created_by: frontend-phase-2-ui-data-endpoint

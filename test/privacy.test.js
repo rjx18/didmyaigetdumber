@@ -8,6 +8,7 @@ const test = require('node:test');
 
 const { dailyLogPath, readDailyLog, writeDailyLog } = require('../src/log-store');
 const { apiDays } = require('../src/server');
+const { buildUiData } = require('../src/ui-data');
 
 function tempBase() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'didmyaigetdumber-'));
@@ -95,5 +96,45 @@ test('public day API exposes only aggregate allowlisted fields', () => {
   assert.equal(fileText.includes('sanitized file path'), false);
   assert.equal(fileText.includes('sanitized command'), false);
   assert.equal(fileText.includes('/home/user/private/file.js'), false);
+});
+
+test('UI data payload exposes only aggregate values and safe labels', () => {
+  const baseDir = tempBase();
+  writeDailyLog({
+    schema_version: 2,
+    date: '2026-06-08',
+    raw_prompt: 'sanitized raw prompt',
+    file_path: 'sanitized file path',
+    command: 'sanitized command',
+    totals: { sessions: 1, user_messages: 4, assistant_messages: 6, tool_calls: 3 },
+    matches: { user_1pt: { events: 1, line_hits: 1 } },
+    tokens: { input: 100, output: 25, total: 125 },
+    tool_output_chars: { Bash: 400, '/home/user/private/file.js': 999 },
+    tool_calls_by_name: { Read: 2, '../private-script': 1 },
+    model_tokens: {
+      'hf:moonshotai/Kimi-K2.6': { input: 100, output: 25, total: 125 },
+      '/home/user/model-path': { input: 999, total: 999 },
+    },
+    windows: [
+      { kind: '5h', sampled_at: '2026-06-08T01:00:00.000Z', resets_at: 1780901738, used_percent: 12, tokens_in_window: 100, path: '/home/user/private/file.js' },
+    ],
+  }, { baseDir });
+
+  const data = buildUiData({ baseDir, days: 7 });
+  const serialized = JSON.stringify(data);
+
+  // safe labels survive; path-like labels are dropped on write
+  assert.ok(data.tools.mix.some((tool) => tool.name === 'Read'));
+  assert.ok(data.tools.mix.every((tool) => !tool.name.includes('/')));
+  assert.ok(data.models.some((model) => model.name === 'hf:moonshotai/Kimi-K2.6'));
+  assert.ok(data.models.every((model) => !model.name.startsWith('/')));
+
+  // no raw content of any kind in the serialized payload
+  assert.equal(serialized.includes('sanitized raw prompt'), false);
+  assert.equal(serialized.includes('sanitized file path'), false);
+  assert.equal(serialized.includes('sanitized command'), false);
+  assert.equal(serialized.includes('/home/user/private/file.js'), false);
+  assert.equal(serialized.includes('../private-script'), false);
+  assert.equal(serialized.includes('/home/user/model-path'), false);
 });
 // harn:end aggregate-only-safety-checks

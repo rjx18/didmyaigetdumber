@@ -5,6 +5,7 @@ const http = require('http');
 const path = require('path');
 const { apiMetricsDays } = require('./metrics');
 const { reportRows } = require('./report');
+const { buildUiData } = require('./ui-data');
 
 function parsePort(value, fallback = 3587) {
   if (value == null) {
@@ -135,6 +136,13 @@ function createServer(options = {}) {
       return;
     }
     // harn:end local-metrics-api
+
+    // harn:assume ui-aggregate-data-endpoint ref=server-ui-api
+    if (url.pathname === '/api/ui') {
+      json(res, { data: buildUiData({ ...options, days: url.searchParams.get('days') || options.days }) });
+      return;
+    }
+    // harn:end ui-aggregate-data-endpoint
 
     if (url.pathname === '/health') {
       json(res, { ok: true });
