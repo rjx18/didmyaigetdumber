@@ -41,9 +41,11 @@
 | 6. Codex live hook adapter | `phase-6-codex-hooks` | complete | `a3766c5` | Codex hook normalization and init. |
 <!-- harn:end codex-live-hook-counting -->
 <!-- harn:assume claude-live-hook-counting ref=progress-phase-7 -->
-| 7. Claude Code live hook adapter | `phase-7-claude-hooks` | complete | phase commit | Claude hook normalization and init. |
+| 7. Claude Code live hook adapter | `phase-7-claude-hooks` | complete | `b554d66` | Claude hook normalization and init. |
 <!-- harn:end claude-live-hook-counting -->
-| 8. Historical backfill | pending | pending | pending | Shared backfill write behavior. |
+<!-- harn:assume backfill-idempotent-writes ref=progress-phase-8 -->
+| 8. Historical backfill | `phase-8-backfill-core` | complete | phase commit | Shared backfill write behavior. |
+<!-- harn:end backfill-idempotent-writes -->
 | 9. Codex backfill | pending | pending | pending | Parse `~/.codex/sessions/**/*.jsonl` aggregates only. |
 | 10. Claude Code backfill | pending | pending | pending | Parse `~/.claude/projects/**/*.jsonl` aggregates only. |
 | 11. Report command | pending | pending | pending | Terminal daily summary and rates. |

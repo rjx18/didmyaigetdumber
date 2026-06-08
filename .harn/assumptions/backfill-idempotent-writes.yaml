@@ -1,0 +1,12 @@
+id: backfill-idempotent-writes
+hash: a-b22d45c99fdb
+title: Backfill idempotent writes
+state: active
+statement: Backfill writes grouped daily aggregates by creating missing daily
+  files and skipping existing dates unless `--overwrite` is explicitly set, so
+  repeated backfills do not double-count historical logs.
+depends_on:
+  - daily-aggregate-log-schema
+  - daily-log-locking
+  - local-aggregate-privacy
+created_by: phase-8-backfill-core

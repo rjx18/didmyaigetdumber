@@ -1,0 +1,55 @@
+id: phase-8-backfill-core
+title: Add shared backfill write behavior
+assumptions:
+  retire: []
+  create:
+    - id: backfill-idempotent-writes
+      title: Backfill idempotent writes
+      statement: Backfill writes grouped daily aggregates by creating missing daily
+        files and skipping existing dates unless `--overwrite` is explicitly
+        set, so repeated backfills do not double-count historical logs.
+      reason: Historical import reads past transcripts without per-session import
+        state, so default additive writes would not be safe to rerun.
+      depends_on:
+        - daily-aggregate-log-schema
+        - daily-log-locking
+        - local-aggregate-privacy
+  reviewed:
+    - id: daily-aggregate-log-schema
+      outcome: unchanged
+      reason: Phase 8 writes the existing daily schema from aggregate increments.
+    - id: daily-log-locking
+      outcome: unchanged
+      reason: Phase 8 uses the locked daily write path.
+    - id: local-aggregate-privacy
+      outcome: unchanged
+      reason: Phase 8 stores aggregate counters only.
+anchors:
+  backfill-idempotent-writes:
+    backfill-write-core:
+      action: change
+      reason: Add grouped daily backfill write helpers.
+    backfill-core-tests:
+      action: change
+      reason: Verify skip and overwrite behavior.
+    progress-phase-8:
+      action: change
+      reason: Track Phase 8 completion.
+  daily-aggregate-log-schema:
+    progress-phase-3:
+      action: keep
+      reason: Daily schema progress remains unchanged.
+  daily-log-locking:
+    progress-phase-4:
+      action: keep
+      reason: Locking progress remains unchanged.
+  local-aggregate-privacy:
+    progress-privacy-storage:
+      action: keep
+      reason: Privacy assumption remains unchanged.
+files:
+  - src/backfill.js
+  - test/backfill.test.js
+  - simple-hook-telemetry-progress.md
+applied:
+  applied_at: 2026-06-08T05:09:15.405Z
