@@ -6,7 +6,7 @@ const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
 
-const { apiDays, createServer, dashboardHtml, parsePort } = require('../src/server');
+const { apiDays, apiMetricsDays, createServer, dashboardHtml, parsePort } = require('../src/server');
 const { createDailyLog, writeDailyLog } = require('../src/log-store');
 
 function tempBase() {
@@ -20,6 +20,13 @@ function writeAggregate(date, options, values) {
   Object.assign(log.matches.user_2pt, values.user_2pt || {});
   Object.assign(log.matches.assistant_1pt, values.assistant_1pt || {});
   Object.assign(log.matches.assistant_2pt, values.assistant_2pt || {});
+  Object.assign(log.tokens, values.tokens || {});
+  Object.assign(log.tool_output_chars, values.tool_output_chars || {});
+  Object.assign(log.tool_calls_by_name, values.tool_calls_by_name || {});
+  Object.assign(log.tool_failures_by_name, values.tool_failures_by_name || {});
+  Object.assign(log.model_tokens, values.model_tokens || {});
+  Object.assign(log.timings_ms, values.timings_ms || {});
+  log.windows.push(...(values.windows || []));
   writeDailyLog(log, options);
 }
 
@@ -67,6 +74,55 @@ test('serves aggregate day data as JSON', async () => {
   assert.equal(days[0].total_messages, 10);
   assert.equal(days[0].sessions, 2);
 });
+
+// harn:assume local-metrics-api ref=server-metrics-tests
+test('serves aggregate metrics day data as JSON', async () => {
+  const baseDir = tempBase();
+  writeAggregate('2026-06-08', { baseDir }, {
+    totals: { sessions: 1, turns: 2, user_messages: 3, assistant_messages: 2, tool_calls: 2, tool_failures: 1, compactions: 1 },
+    tokens: { input: 100, cache_read: 50, cache_creation: 25, output: 40, reasoning_output: 10, total: 215, thinking_chars: 20, text_chars: 30 },
+    model_tokens: { 'gpt-5.4': { input: 100, output: 40, total: 140 } },
+    tool_output_chars: { Bash: 300, Read: 100 },
+    tool_calls_by_name: { Bash: 1, Read: 1 },
+    tool_failures_by_name: { Bash: 1 },
+    timings_ms: { turn_sum: 3000, turn_count: 2, ttft_sum: 1000, ttft_count: 1, tool_latency_sum: 400, tool_latency_count: 2, generation_sum: 2000, generation_count: 2 },
+    windows: [
+      { kind: '5h', sampled_at: '2026-06-08T01:00:00.000Z', resets_at: 1780901738, used_percent: 10, tokens_in_window: 100 },
+      { kind: '5h', sampled_at: '2026-06-08T02:00:00.000Z', resets_at: 1780901738, used_percent: 20, tokens_in_window: 300 },
+    ],
+  });
+
+  const days = apiMetricsDays({ baseDir, days: 1 });
+  const serialized = JSON.stringify(days);
+
+  assert.equal(days.length, 1);
+  assert.equal(days[0].date, '2026-06-08');
+  assert.equal(days[0].totals.turns, 2);
+  assert.equal(days[0].tokens.input, 100);
+  assert.equal(days[0].cache_ratio, 0.2857);
+  assert.equal(days[0].reasoning_share, 0.25);
+  assert.equal(days[0].thinking_char_share, 0.4);
+  assert.equal(days[0].tool_output_share.Bash, 0.75);
+  assert.equal(days[0].tool_call_mix.Read, 0.5);
+  assert.equal(days[0].tool_error_rate_by_name.Bash, 1);
+  assert.equal(days[0].timings_ms.avg_turn, 1500);
+  assert.equal(days[0].timings_ms.output_tokens_per_sec, 20);
+  assert.equal(days[0].windows[0].implied_allowance, 1000);
+  assert.equal(days[0].windows[1].burn_rate_tokens_per_hour, 200);
+  assert.equal(serialized.includes('private'), false);
+
+  const server = createServer({ baseDir });
+  const port = await listen(server);
+  try {
+    const response = await fetch(`http://127.0.0.1:${port}/api/metrics/days?days=1`);
+    const payload = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(payload.days[0].tool_output_share.Bash, 0.75);
+  } finally {
+    await close(server);
+  }
+});
+// harn:end local-metrics-api
 
 test('serves dashboard HTML and API over HTTP', async () => {
   const baseDir = tempBase();

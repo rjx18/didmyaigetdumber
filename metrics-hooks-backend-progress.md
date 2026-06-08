@@ -33,8 +33,10 @@
 | 5. Offset tail store | `metrics-phase-5-offset-tail-store` | complete | `e3d38ce` | Persist per-session byte offsets. |
 <!-- harn:end transcript-offset-tail-store -->
 <!-- harn:assume live-hook-numeric-tail-integration ref=progress-phase-6 -->
-| 6. Live hook tail integration | `metrics-phase-6-live-tail-hooks` | complete | phase commit | Tail active transcripts from low-frequency hooks. |
+| 6. Live hook tail integration | `metrics-phase-6-live-tail-hooks` | complete | `92e9974` | Tail active transcripts from low-frequency hooks. |
 <!-- harn:end live-hook-numeric-tail-integration -->
-| 7. Local backend API | pending | pending | pending | Return aggregate metrics JSON for future frontend. |
+<!-- harn:assume local-metrics-api ref=progress-phase-7 -->
+| 7. Local backend API | `metrics-phase-7-local-metrics-api` | complete | phase commit | Return aggregate metrics JSON for future frontend. |
+<!-- harn:end local-metrics-api -->
 | 8. CLI metrics report | pending | pending | pending | Add concise backend validation report. |
 | 9. End-to-end verification | pending | pending | pending | Compare backfill/live paths and privacy output. |

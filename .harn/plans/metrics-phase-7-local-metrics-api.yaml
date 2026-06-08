@@ -1,0 +1,58 @@
+id: metrics-phase-7-local-metrics-api
+title: Add local metrics API
+assumptions:
+  retire: []
+  create:
+    - id: local-metrics-api
+      title: Local metrics API
+      statement: The local server exposes aggregate-only metric JSON derived from
+        schema v2 daily logs, including token totals, cache ratios, reasoning or
+        thinking shares, tool output/call/error mixes, timing averages, and
+        Codex window allowance/burn-rate samples, while preserving the existing
+        `/api/days` response shape and excluding raw text, paths, command text,
+        source excerpts, and token content.
+      reason: The dashboard needs backend metric data before frontend chart work.
+      depends_on:
+        - daily-metrics-log-schema
+        - local-dashboard-server
+        - local-aggregate-privacy
+  reviewed:
+    - id: local-dashboard-server
+      outcome: unchanged
+      reason: The existing `/api/days` endpoint and dashboard HTML remain
+        backward-compatible; this phase only adds aggregate metric JSON.
+    - id: daily-metrics-log-schema
+      outcome: unchanged
+      reason: Metrics are derived from the schema v2 fields already present in daily
+        logs.
+    - id: local-aggregate-privacy
+      outcome: unchanged
+      reason: API output is allowlisted aggregate-only numeric data and safe labels.
+anchors:
+  local-metrics-api:
+    metrics-derivations:
+      action: change
+      reason: Add report-time formulas for metric rows.
+    server-metrics-api:
+      action: change
+      reason: Serve `/api/metrics/days` aggregate metric JSON.
+    server-metrics-tests:
+      action: change
+      reason: Verify formulas, endpoint behavior, and privacy allowlist.
+    progress-phase-7:
+      action: change
+      reason: Track Phase 7 implementation status.
+  local-dashboard-server:
+    server-http:
+      action: change
+      reason: Add an endpoint without changing existing routes.
+    server-tests:
+      action: change
+      reason: Keep existing API tests and add metrics endpoint coverage.
+files:
+  - src/metrics.js
+  - src/server.js
+  - test/server.test.js
+  - metrics-hooks-backend-progress.md
+applied:
+  applied_at: 2026-06-08T15:23:44.822Z

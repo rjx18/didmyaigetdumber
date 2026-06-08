@@ -1,0 +1,15 @@
+id: local-metrics-api
+hash: a-39bf79bed7cf
+title: Local metrics API
+state: active
+statement: The local server exposes aggregate-only metric JSON derived from
+  schema v2 daily logs, including token totals, cache ratios, reasoning or
+  thinking shares, tool output/call/error mixes, timing averages, and Codex
+  window allowance/burn-rate samples, while preserving the existing `/api/days`
+  response shape and excluding raw text, paths, command text, source excerpts,
+  and token content.
+depends_on:
+  - daily-metrics-log-schema
+  - local-dashboard-server
+  - local-aggregate-privacy
+created_by: metrics-phase-7-local-metrics-api

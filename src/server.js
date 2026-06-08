@@ -1,6 +1,7 @@
 'use strict';
 
 const http = require('http');
+const { apiMetricsDays } = require('./metrics');
 const { reportRows } = require('./report');
 
 function parsePort(value, fallback = 3587) {
@@ -492,6 +493,13 @@ function createServer(options = {}) {
       return;
     }
 
+    // harn:assume local-metrics-api ref=server-metrics-api
+    if (url.pathname === '/api/metrics/days') {
+      json(res, { days: apiMetricsDays({ ...options, days: url.searchParams.get('days') || options.days }) });
+      return;
+    }
+    // harn:end local-metrics-api
+
     if (url.pathname === '/health') {
       json(res, { ok: true });
       return;
@@ -533,6 +541,7 @@ async function startServer(options = {}, io) {
 
 module.exports = {
   apiDays,
+  apiMetricsDays,
   createServer,
   dashboardHtml,
   parsePort,
