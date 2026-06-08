@@ -6,6 +6,7 @@ const { runDoctor } = require('./doctor');
 const { initCodex } = require('./init/codex');
 const { initClaude } = require('./init/claude');
 const { runInstall } = require('./install');
+const { runMetricsReport } = require('./metrics-report');
 const { runReport } = require('./report');
 const { startServer } = require('./server');
 
@@ -22,6 +23,7 @@ Usage:
   didmyaigetdumber backfill all [--overwrite]
   didmyaigetdumber doctor
   didmyaigetdumber report [--days N]
+  didmyaigetdumber metrics [--days N]
   didmyaigetdumber start [--port N]
 `;
 
@@ -119,6 +121,9 @@ async function run(args, io) {
   }
   if (command === 'report') {
     return runReport(options, io);
+  }
+  if (command === 'metrics') {
+    return runMetricsReport(options, io);
   }
   if (command === 'start') {
     return startServer(options, io);

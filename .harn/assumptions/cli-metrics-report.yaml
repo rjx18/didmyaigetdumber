@@ -1,0 +1,14 @@
+id: cli-metrics-report
+hash: a-8efe38eb2c49
+title: CLI metrics report
+state: active
+statement: The `metrics` CLI command reads local schema v2 daily logs through
+  the derived metrics helpers and prints concise aggregate-only rows with token
+  totals, cache/reasoning/thinking shares, tool-call density, read/explore
+  share, top tool-output contributor, timing averages, and latest Codex window
+  allowance/burn-rate sample.
+depends_on:
+  - local-metrics-api
+  - npm-cli-entrypoint
+  - local-aggregate-privacy
+created_by: metrics-phase-8-cli-metrics-report

@@ -36,7 +36,9 @@
 | 6. Live hook tail integration | `metrics-phase-6-live-tail-hooks` | complete | `92e9974` | Tail active transcripts from low-frequency hooks. |
 <!-- harn:end live-hook-numeric-tail-integration -->
 <!-- harn:assume local-metrics-api ref=progress-phase-7 -->
-| 7. Local backend API | `metrics-phase-7-local-metrics-api` | complete | phase commit | Return aggregate metrics JSON for future frontend. |
+| 7. Local backend API | `metrics-phase-7-local-metrics-api` | complete | `b92c98c` | Return aggregate metrics JSON for future frontend. |
 <!-- harn:end local-metrics-api -->
-| 8. CLI metrics report | pending | pending | pending | Add concise backend validation report. |
+<!-- harn:assume cli-metrics-report ref=progress-phase-8 -->
+| 8. CLI metrics report | `metrics-phase-8-cli-metrics-report` | complete | phase commit | Add concise backend validation report. |
+<!-- harn:end cli-metrics-report -->
 | 9. End-to-end verification | pending | pending | pending | Compare backfill/live paths and privacy output. |

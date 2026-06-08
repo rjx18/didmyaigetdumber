@@ -1,0 +1,52 @@
+id: metrics-phase-8-cli-metrics-report
+title: Add CLI metrics report
+assumptions:
+  retire: []
+  create:
+    - id: cli-metrics-report
+      title: CLI metrics report
+      statement: The `metrics` CLI command reads local schema v2 daily logs through
+        the derived metrics helpers and prints concise aggregate-only rows with
+        token totals, cache/reasoning/thinking shares, tool-call density,
+        read/explore share, top tool-output contributor, timing averages, and
+        latest Codex window allowance/burn-rate sample.
+      reason: Backend metrics need a terminal validation surface before frontend chart
+        work.
+      depends_on:
+        - local-metrics-api
+        - npm-cli-entrypoint
+        - local-aggregate-privacy
+  reviewed:
+    - id: npm-cli-entrypoint
+      outcome: unchanged
+      reason: The existing JavaScript CLI dispatch remains stable while adding one
+        documented command.
+    - id: local-metrics-api
+      outcome: unchanged
+      reason: The CLI consumes existing derived metric rows without changing API
+        formulas.
+    - id: daily-report-percentages
+      outcome: unchanged
+      reason: The existing `report` command stays focused on friction percentages.
+anchors:
+  cli-metrics-report:
+    metrics-report-format:
+      action: change
+      reason: Add concise terminal formatting and run helper.
+    metrics-report-tests:
+      action: change
+      reason: Verify formatting, denominators, and empty output.
+    progress-phase-8:
+      action: change
+      reason: Track Phase 8 implementation status.
+  npm-cli-entrypoint:
+    cli-dispatch:
+      action: change
+      reason: Document and dispatch the new `metrics` command.
+files:
+  - src/cli.js
+  - src/metrics-report.js
+  - test/metrics-report.test.js
+  - metrics-hooks-backend-progress.md
+applied:
+  applied_at: 2026-06-08T15:25:55.042Z
