@@ -1,0 +1,76 @@
+id: phase-6-codex-hooks
+title: Add Codex live hook adapter
+assumptions:
+  retire: []
+  create:
+    - id: codex-live-hook-counting
+      title: Codex live hook counting
+      statement: Codex live hook payloads are normalized defensively and counted
+        through the shared pattern and daily-log increment path, so user
+        messages, tools, permissions, sessions, and runtime interrupts update
+        aggregate logs without transcript parsing.
+      reason: Codex support is a core v1 integration and must share privacy-preserving
+        storage behavior with other sources.
+      depends_on:
+        - normalized-event-increments
+        - daily-log-locking
+        - scope-pattern-loader
+        - npm-cli-entrypoint
+  reviewed:
+    - id: normalized-event-increments
+      outcome: unchanged
+      reason: Phase 6 consumes the normalized increment model.
+    - id: daily-log-locking
+      outcome: unchanged
+      reason: Phase 6 uses the locked daily update path.
+    - id: scope-pattern-loader
+      outcome: unchanged
+      reason: Phase 6 uses scope pattern matching without changing patterns.
+    - id: local-aggregate-privacy
+      outcome: unchanged
+      reason: Phase 6 does not store raw hook payload text.
+anchors:
+  codex-live-hook-counting:
+    codex-adapter:
+      action: change
+      reason: Normalize Codex hook payloads.
+    hook-runner:
+      action: change
+      reason: Read stdin, apply patterns in memory, and update the daily log.
+    codex-init:
+      action: change
+      reason: Merge Codex hook commands into user-level config.
+    codex-hook-tests:
+      action: change
+      reason: Verify Codex normalization, hook counting, and config merge behavior.
+    progress-phase-6:
+      action: change
+      reason: Track Phase 6 completion.
+  normalized-event-increments:
+    progress-phase-5:
+      action: keep
+      reason: Event model progress remains unchanged.
+  daily-log-locking:
+    progress-phase-4:
+      action: keep
+      reason: Locking progress remains unchanged.
+  scope-pattern-loader:
+    progress-phase-2:
+      action: keep
+      reason: Pattern loader progress remains unchanged.
+  npm-cli-entrypoint:
+    cli-dispatch:
+      action: keep
+      reason: Existing CLI routing remains unchanged.
+  local-aggregate-privacy:
+    progress-privacy-storage:
+      action: keep
+      reason: Privacy assumption remains unchanged.
+files:
+  - src/adapters/codex.js
+  - src/hook.js
+  - src/init/codex.js
+  - test/codex.test.js
+  - simple-hook-telemetry-progress.md
+applied:
+  applied_at: 2026-06-08T04:59:09.083Z

@@ -1,7 +1,52 @@
 'use strict';
 
-async function handleHook(_options, _io) {
+const { normalizeCodexPayload } = require('./adapters/codex');
+const { incrementFromEvent } = require('./events');
+const { updateDailyLog, localDate } = require('./log-store');
+const { matchPatterns } = require('./patterns');
+
+async function readStdin(stdin) {
+  let input = '';
+  for await (const chunk of stdin) {
+    input += chunk;
+  }
+  return input;
+}
+
+function parsePayload(input) {
+  if (!input || !input.trim()) {
+    return {};
+  }
+  return JSON.parse(input);
+}
+
+function dateForPayload(payload, options = {}) {
+  if (options.date) {
+    return options.date;
+  }
+  const timestamp = payload.observed_at || payload.timestamp || (payload.payload && payload.payload.timestamp);
+  if (timestamp) {
+    const parsed = new Date(timestamp);
+    if (!Number.isNaN(parsed.getTime())) {
+      return localDate(parsed);
+    }
+  }
+  return localDate();
+}
+
+// harn:assume codex-live-hook-counting ref=hook-runner
+async function handleHook(options = {}, io) {
+  const payload = options.payload || parsePayload(await readStdin(io.stdin));
+  const normalized = normalizeCodexPayload(payload);
+
+  if (normalized.scope && normalized.text) {
+    normalized.pattern_match = matchPatterns(normalized.scope, normalized.text);
+  }
+
+  const increment = incrementFromEvent(normalized);
+  updateDailyLog(dateForPayload(payload, options), increment, options);
   return 0;
 }
+// harn:end codex-live-hook-counting
 
 module.exports = { handleHook };

@@ -1,0 +1,14 @@
+id: codex-live-hook-counting
+hash: a-4713f8c4336f
+title: Codex live hook counting
+state: active
+statement: Codex live hook payloads are normalized defensively and counted
+  through the shared pattern and daily-log increment path, so user messages,
+  tools, permissions, sessions, and runtime interrupts update aggregate logs
+  without transcript parsing.
+depends_on:
+  - normalized-event-increments
+  - daily-log-locking
+  - scope-pattern-loader
+  - npm-cli-entrypoint
+created_by: phase-6-codex-hooks

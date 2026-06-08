@@ -35,9 +35,11 @@
 | 4. Locking and atomic writes | `phase-4-locking` | complete | `0ba2a96` | Busy-wait lock and atomic JSON writes. |
 <!-- harn:end daily-log-locking -->
 <!-- harn:assume normalized-event-increments ref=progress-phase-5 -->
-| 5. Normalized event model | `phase-5-event-model` | complete | phase commit | In-memory event and increment objects. |
+| 5. Normalized event model | `phase-5-event-model` | complete | `0966fb5` | In-memory event and increment objects. |
 <!-- harn:end normalized-event-increments -->
-| 6. Codex live hook adapter | pending | pending | pending | Codex hook normalization and init. |
+<!-- harn:assume codex-live-hook-counting ref=progress-phase-6 -->
+| 6. Codex live hook adapter | `phase-6-codex-hooks` | complete | phase commit | Codex hook normalization and init. |
+<!-- harn:end codex-live-hook-counting -->
 | 7. Claude Code live hook adapter | pending | pending | pending | Claude hook normalization and init. |
 | 8. Historical backfill | pending | pending | pending | Shared backfill write behavior. |
 | 9. Codex backfill | pending | pending | pending | Parse `~/.codex/sessions/**/*.jsonl` aggregates only. |

@@ -1,8 +1,60 @@
 'use strict';
 
-async function initCodex(_options, io) {
-  io.stdout.write('codex init is not implemented yet\n');
-  return 0;
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const { CODEX_HOOK_EVENTS } = require('../adapters/codex');
+
+function defaultCodexHooksPath() {
+  return path.join(os.homedir(), '.codex', 'hooks.json');
 }
 
-module.exports = { initCodex };
+function hookCommand(options = {}) {
+  return options.command || process.env.DIDMYAIGETDUMBER_BIN || process.argv[1] || 'didmyaigetdumber';
+}
+
+function readJsonIfExists(filePath) {
+  if (!fs.existsSync(filePath)) {
+    return {};
+  }
+  return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+}
+
+// harn:assume codex-live-hook-counting ref=codex-init
+function mergeCodexHooksConfig(existing = {}, command) {
+  const next = { ...existing, hooks: { ...(existing.hooks || {}) } };
+  const hookEntry = {
+    name: 'didmyaigetdumber',
+    command: `${command} hook`,
+    env: {
+      DIDMYAIGETDUMBER_AGENT: 'codex',
+    },
+  };
+
+  for (const event of CODEX_HOOK_EVENTS) {
+    const entries = Array.isArray(next.hooks[event]) ? [...next.hooks[event]] : [];
+    const filtered = entries.filter((entry) => entry && entry.name !== hookEntry.name);
+    filtered.push(hookEntry);
+    next.hooks[event] = filtered;
+  }
+
+  return next;
+}
+
+async function initCodex(options = {}, io) {
+  const filePath = options.configPath || defaultCodexHooksPath();
+  const command = hookCommand(options);
+  const merged = mergeCodexHooksConfig(readJsonIfExists(filePath), command);
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, `${JSON.stringify(merged, null, 2)}\n`);
+  io.stdout.write(`installed codex hooks: ${filePath}\n`);
+  return 0;
+}
+// harn:end codex-live-hook-counting
+
+module.exports = {
+  CODEX_HOOK_EVENTS,
+  defaultCodexHooksPath,
+  initCodex,
+  mergeCodexHooksConfig,
+};
