@@ -1,5 +1,20 @@
 {
-  "dependencies": {
-    "vader-sentiment": "^1.1.3"
+  "name": "didmyaigetdumber",
+  "version": "0.1.0",
+  "description": "Local-first hook telemetry for AI coding agents.",
+  "license": "MIT",
+  "type": "commonjs",
+  "bin": {
+    "didmyaigetdumber": "./bin/didmyaigetdumber.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "patterns",
+    "README.md",
+    "SPEC.md"
+  ],
+  "scripts": {
+    "test": "node bin/didmyaigetdumber.js --help >/dev/null && node bin/didmyaigetdumber.js __unknown__ >/dev/null 2>&1; test $? -ne 0"
   }
 }

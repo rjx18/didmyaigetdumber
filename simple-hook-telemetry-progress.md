@@ -21,8 +21,10 @@
 
 | Phase | Harn plan | Status | Commit | Notes |
 | --- | --- | --- | --- | --- |
-| 0. Baseline two-pattern planning state | `phase-0-baseline` | in progress | pending | Consolidated pattern files, spec updates, npm metadata, and phased implementation plan. |
-| 1. Package and CLI skeleton | pending | pending | pending | Create executable CLI and command routing. |
+| 0. Baseline two-pattern planning state | `phase-0-baseline` | complete | `5eb7f4b` | Consolidated pattern files, spec updates, npm metadata, and phased implementation plan. |
+<!-- harn:assume npm-cli-entrypoint ref=progress-phase-1 -->
+| 1. Package and CLI skeleton | `phase-1-cli-skeleton` | complete | phase commit | Created executable CLI and command routing. |
+<!-- harn:end npm-cli-entrypoint -->
 | 2. Pattern loader | pending | pending | pending | Compile scope pattern files and return line hits. |
 | 3. Minimal local storage | pending | pending | pending | Daily schema and default counters. |
 | 4. Locking and atomic writes | pending | pending | pending | Busy-wait lock and atomic JSON writes. |

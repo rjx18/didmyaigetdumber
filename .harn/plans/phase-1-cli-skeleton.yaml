@@ -1,0 +1,62 @@
+id: phase-1-cli-skeleton
+title: Add npm CLI skeleton
+assumptions:
+  retire: []
+  create:
+    - id: npm-cli-entrypoint
+      title: npm CLI entrypoint
+      statement: The package exposes a `didmyaigetdumber` executable that dispatches
+        documented commands from plain JavaScript, so npm installs, npx runs,
+        and hook configs can all invoke the same stable entrypoint.
+      reason: Hook installation and local reporting depend on a package-level binary
+        path that works without a build step.
+      depends_on:
+        - two-scope-pattern-files
+        - local-aggregate-privacy
+  reviewed:
+    - id: two-scope-pattern-files
+      outcome: unchanged
+      reason: Phase 1 only creates CLI scaffolding and does not change the two-file
+        pattern model.
+    - id: local-aggregate-privacy
+      outcome: unchanged
+      reason: Phase 1 creates command stubs only and must not introduce raw telemetry
+        storage.
+anchors:
+  npm-cli-entrypoint:
+    bin-entrypoint:
+      action: change
+      reason: Add the executable wrapper used by npm and hooks.
+    cli-dispatch:
+      action: change
+      reason: Add command routing for the documented CLI commands.
+    progress-phase-1:
+      action: change
+      reason: Track Phase 1 completion and commit hash.
+  two-scope-pattern-files:
+    progress-pattern-files:
+      action: keep
+      reason: The pattern file assumption remains unchanged in this phase.
+  local-aggregate-privacy:
+    progress-privacy-storage:
+      action: keep
+      reason: The privacy boundary assumption remains unchanged in this phase.
+files:
+  - package.json
+  - package-lock.json
+  - bin/didmyaigetdumber.js
+  - src/cli.js
+  - src/hook.js
+  - src/patterns.js
+  - src/log-store.js
+  - src/backfill.js
+  - src/report.js
+  - src/server.js
+  - src/doctor.js
+  - src/init/codex.js
+  - src/init/claude.js
+  - src/adapters/codex.js
+  - src/adapters/claude.js
+  - simple-hook-telemetry-progress.md
+applied:
+  applied_at: 2026-06-08T04:50:05.632Z

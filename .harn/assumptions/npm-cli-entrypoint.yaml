@@ -1,0 +1,11 @@
+id: npm-cli-entrypoint
+hash: a-1de33ea898d4
+title: npm CLI entrypoint
+state: active
+statement: The package exposes a `didmyaigetdumber` executable that dispatches
+  documented commands from plain JavaScript, so npm installs, npx runs, and hook
+  configs can all invoke the same stable entrypoint.
+depends_on:
+  - two-scope-pattern-files
+  - local-aggregate-privacy
+created_by: phase-1-cli-skeleton
