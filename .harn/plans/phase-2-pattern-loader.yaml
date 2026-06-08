@@ -1,0 +1,66 @@
+id: phase-2-pattern-loader
+title: Add scope pattern loader
+assumptions:
+  retire: []
+  create:
+    - id: scope-pattern-loader
+      title: Scope pattern loader
+      statement: Pattern loading maps `user` and `assistant` scopes to the package
+        pattern files, compiles each non-empty line case-insensitively, and
+        reports matching line counts without retaining matched text.
+      reason: Hook, backfill, doctor, and reporting behavior depend on a single
+        privacy-preserving pattern matching path.
+      depends_on:
+        - two-scope-pattern-files
+        - local-aggregate-privacy
+        - npm-cli-entrypoint
+  reviewed:
+    - id: two-scope-pattern-files
+      outcome: unchanged
+      reason: Phase 2 implements the existing two-file pattern layout.
+    - id: local-aggregate-privacy
+      outcome: unchanged
+      reason: Phase 2 returns counts and line references only, not raw matched text
+        storage.
+    - id: npm-cli-entrypoint
+      outcome: unchanged
+      reason: Phase 2 keeps the existing CLI dispatch shape while adding doctor
+        behavior.
+anchors:
+  scope-pattern-loader:
+    loader-api:
+      action: change
+      reason: Implement scope-to-file loading, regex compilation, and matching.
+    doctor-pattern-check:
+      action: change
+      reason: Make doctor compile current pattern files.
+    pattern-loader-tests:
+      action: change
+      reason: Verify pattern compilation and matching behavior.
+    progress-phase-2:
+      action: change
+      reason: Track Phase 2 completion.
+  two-scope-pattern-files:
+    progress-pattern-files:
+      action: keep
+      reason: The two-file pattern assumption remains unchanged.
+  local-aggregate-privacy:
+    progress-privacy-storage:
+      action: keep
+      reason: The privacy boundary remains unchanged.
+  npm-cli-entrypoint:
+    cli-dispatch:
+      action: keep
+      reason: Command routing shape should not change in this phase.
+    progress-phase-1:
+      action: keep
+      reason: Phase 1 progress anchor should remain stable.
+files:
+  - src/patterns.js
+  - src/doctor.js
+  - test/patterns.test.js
+  - package.json
+  - package-lock.json
+  - simple-hook-telemetry-progress.md
+applied:
+  applied_at: 2026-06-08T04:51:51.201Z

@@ -15,6 +15,6 @@
     "SPEC.md"
   ],
   "scripts": {
-    "test": "node bin/didmyaigetdumber.js --help >/dev/null && node bin/didmyaigetdumber.js __unknown__ >/dev/null 2>&1; test $? -ne 0"
+    "test": "node --test"
   }
 }
