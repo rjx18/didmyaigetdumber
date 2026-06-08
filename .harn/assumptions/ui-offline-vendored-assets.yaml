@@ -1,0 +1,11 @@
+id: ui-offline-vendored-assets
+hash: a-e593a09fcb7f
+title: UI offline vendored assets
+state: active
+statement: The dashboard `index.html` loads React, react-dom, Babel-standalone,
+  and fonts only from locally vendored files under `src/ui/vendor/`, issuing no
+  external or CDN network requests, so the local-first dashboard works fully
+  offline and discloses nothing to third parties.
+depends_on:
+  - local-aggregate-privacy
+created_by: frontend-phase-1-static-serving

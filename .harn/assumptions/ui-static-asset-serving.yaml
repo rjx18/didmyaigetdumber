@@ -1,0 +1,12 @@
+id: ui-static-asset-serving
+hash: a-95e98c7ce6d9
+title: UI static asset serving
+state: active
+statement: The start server serves the dashboard UI as static files resolved
+  only from within `src/ui/`, mapping `/` to `index.html` and returning 404 for
+  any request path that escapes that root, so browser asset requests cannot read
+  files outside the UI directory.
+depends_on:
+  - local-dashboard-server
+  - local-aggregate-privacy
+created_by: frontend-phase-1-static-serving

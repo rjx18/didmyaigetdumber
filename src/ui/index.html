@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>didmyaigetdumber</title>
+<link rel="stylesheet" href="styles.css" />
+<style>
+  body.no-axis .mini .axis { display: none; }
+</style>
+<!-- harn:assume ui-offline-vendored-assets ref=ui-index-vendor -->
+<!-- All third-party assets are vendored under vendor/; the dashboard makes no
+     external/CDN network requests so it works fully offline and leaks nothing. -->
+<style>
+  /* Hanken Grotesk is a variable font: one file covers weights 400-700. */
+  @font-face {
+    font-family: "Hanken Grotesk";
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: swap;
+    src: url("vendor/fonts/hanken-grotesk.woff2") format("woff2");
+  }
+  @font-face {
+    font-family: "IBM Plex Mono";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url("vendor/fonts/ibm-plex-mono-400.woff2") format("woff2");
+  }
+  @font-face {
+    font-family: "IBM Plex Mono";
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url("vendor/fonts/ibm-plex-mono-500.woff2") format("woff2");
+  }
+</style>
+<script src="vendor/react.production.min.js"></script>
+<script src="vendor/react-dom.production.min.js"></script>
+<script src="vendor/babel.min.js"></script>
+<!-- harn:end ui-offline-vendored-assets -->
+</head>
+<body>
+<div id="root"></div>
+
+<script src="data.js"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="charts.jsx"></script>
+<script type="text/babel" src="sections.jsx"></script>
+<script type="text/babel" src="app.jsx"></script>
+</body>
+</html>

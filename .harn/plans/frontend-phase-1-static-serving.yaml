@@ -1,0 +1,82 @@
+id: frontend-phase-1-static-serving
+title: Serve vendored dashboard UI as static files
+assumptions:
+  retire: []
+  create:
+    - id: ui-static-asset-serving
+      title: UI static asset serving
+      statement: The start server serves the dashboard UI as static files resolved
+        only from within `src/ui/`, mapping `/` to `index.html` and returning
+        404 for any request path that escapes that root, so browser asset
+        requests cannot read files outside the UI directory.
+      reason: The dashboard moves from an inline HTML string to vendored static files,
+        so the server must serve them safely without path traversal.
+      depends_on:
+        - local-dashboard-server
+        - local-aggregate-privacy
+    - id: ui-offline-vendored-assets
+      title: UI offline vendored assets
+      statement: The dashboard `index.html` loads React, react-dom, Babel-standalone,
+        and fonts only from locally vendored files under `src/ui/vendor/`,
+        issuing no external or CDN network requests, so the local-first
+        dashboard works fully offline and discloses nothing to third parties.
+      reason: Local-first privacy requires the dashboard to make no outbound network
+        requests.
+      depends_on:
+        - local-aggregate-privacy
+  reviewed:
+    - id: local-dashboard-server
+      outcome: unchanged
+      reason: Start still runs a localhost server exposing aggregate-only `/api/days`
+        and a browser dashboard; the dashboard's inline HTML is replaced by
+        static file serving captured by ui-static-asset-serving, with no change
+        to the server's external contract.
+    - id: local-aggregate-privacy
+      outcome: unchanged
+      reason: Served static assets and API responses remain aggregate-only; no raw
+        transcript content is served.
+anchors:
+  ui-static-asset-serving:
+    server-static:
+      action: change
+      reason: Add the static file handler with content-type map and traversal guard.
+    server-tests-static:
+      action: change
+      reason: Verify static serving, content types, and traversal rejection.
+    progress-phase-1:
+      action: change
+      reason: Track Phase 1 implementation status.
+  ui-offline-vendored-assets:
+    ui-index-vendor:
+      action: change
+      reason: Reference locally vendored scripts, styles, and @font-face sources.
+  local-dashboard-server:
+    server-dashboard:
+      action: remove
+      reason: Remove the inline dashboard HTML string; the UI is now static files.
+    server-http:
+      action: change
+      reason: Route `/` and asset paths to the static handler without changing the API
+        contract.
+    server-tests:
+      action: change
+      reason: Replace the inline-dashboard-HTML test with static-serving coverage.
+files:
+  - src/server.js
+  - test/server.test.js
+  - src/ui/index.html
+  - src/ui/styles.css
+  - src/ui/app.jsx
+  - src/ui/charts.jsx
+  - src/ui/sections.jsx
+  - src/ui/tweaks-panel.jsx
+  - src/ui/data.js
+  - src/ui/vendor/react.production.min.js
+  - src/ui/vendor/react-dom.production.min.js
+  - src/ui/vendor/babel.min.js
+  - src/ui/vendor/fonts/hanken-grotesk.woff2
+  - src/ui/vendor/fonts/ibm-plex-mono-400.woff2
+  - src/ui/vendor/fonts/ibm-plex-mono-500.woff2
+  - frontend-dashboard-progress.md
+applied:
+  applied_at: 2026-06-08T17:54:16.092Z

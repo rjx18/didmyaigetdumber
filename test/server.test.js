@@ -6,7 +6,7 @@ const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
 
-const { apiDays, apiMetricsDays, createServer, dashboardHtml, parsePort } = require('../src/server');
+const { apiDays, apiMetricsDays, createServer, parsePort } = require('../src/server');
 const { createDailyLog, writeDailyLog } = require('../src/log-store');
 
 function tempBase() {
@@ -124,11 +124,8 @@ test('serves aggregate metrics day data as JSON', async () => {
 });
 // harn:end local-metrics-api
 
-test('serves dashboard HTML and API over HTTP', async () => {
+test('serves dashboard UI and API over HTTP', async () => {
   const baseDir = tempBase();
-  const html = dashboardHtml();
-  assert.match(html, /<svg id="chart"/);
-  assert.match(html, /\/api\/days/);
 
   writeAggregate('2026-06-08', { baseDir }, {
     totals: { user_messages: 1, assistant_messages: 1 },
@@ -148,10 +145,40 @@ test('serves dashboard HTML and API over HTTP', async () => {
     assert.equal(apiPayload.days.length, 1);
     assert.equal(apiPayload.days[0].total_pct, 50);
     assert.equal(pageResponse.status, 200);
-    assert.match(page, /didmyaigetdumber/);
+    assert.match(pageResponse.headers.get('content-type'), /text\/html/);
+    assert.match(page, /<div id="root">/);
+    assert.match(page, /vendor\/react\.production\.min\.js/);
     assert.equal(faviconResponse.status, 204);
   } finally {
     await close(server);
   }
 });
 // harn:end local-dashboard-server
+
+// harn:assume ui-static-asset-serving ref=server-tests-static
+test('serves vendored static UI assets and blocks path escapes', async () => {
+  const baseDir = tempBase();
+  const server = createServer({ baseDir });
+  const port = await listen(server);
+  try {
+    const css = await fetch(`http://127.0.0.1:${port}/styles.css`);
+    const react = await fetch(`http://127.0.0.1:${port}/vendor/react.production.min.js`);
+    const font = await fetch(`http://127.0.0.1:${port}/vendor/fonts/ibm-plex-mono-400.woff2`);
+    const missing = await fetch(`http://127.0.0.1:${port}/package.json`);
+    const escaped = await fetch(`http://127.0.0.1:${port}/vendor/../../package.json`);
+    const encoded = await fetch(`http://127.0.0.1:${port}/%2e%2e%2fpackage.json`);
+
+    assert.equal(css.status, 200);
+    assert.match(css.headers.get('content-type'), /text\/css/);
+    assert.equal(react.status, 200);
+    assert.match(react.headers.get('content-type'), /javascript/);
+    assert.equal(font.status, 200);
+    assert.match(font.headers.get('content-type'), /font\/woff2/);
+    assert.equal(missing.status, 404);
+    assert.equal(escaped.status, 404);
+    assert.equal(encoded.status, 404);
+  } finally {
+    await close(server);
+  }
+});
+// harn:end ui-static-asset-serving

@@ -1,0 +1,158 @@
+// charts.jsx — the one chart primitive: a single thin line, one baseline axis, hover popup.
+const { useState, useRef, useCallback } = React;
+
+// build an SVG path in a 1000 x H viewBox (preserveAspectRatio none keeps it responsive;
+// vector-effect:non-scaling-stroke keeps the line hairline-thin at any width)
+function pathFor(values, H, padY) {
+  const n = values.length;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || 1;
+  const innerH = H - padY * 2;
+  const pts = values.map((v, i) => {
+    const x = (i / (n - 1)) * 1000;
+    const y = padY + (1 - (v - min) / span) * innerH;
+    return [x, y];
+  });
+  const d = pts.map((p, i) => (i === 0 ? `M${p[0].toFixed(2)},${p[1].toFixed(2)}` : `L${p[0].toFixed(2)},${p[1].toFixed(2)}`)).join(" ");
+  return { d, pts, min, max, span };
+}
+
+function pctX(i, n) { return (i / (n - 1)) * 100; }
+function pctY(v, min, span, padFrac) {
+  const inner = 1 - padFrac * 2;
+  return (padFrac + (1 - (v - min) / span) * inner) * 100;
+}
+
+// fmt helpers shared everywhere
+const FMT = {
+  pct1: (v) => v.toFixed(1) + "%",
+  pct0: (v) => Math.round(v) + "%",
+  ratio: (v) => (v * 100).toFixed(1) + "%",
+  int: (v) => Math.round(v).toLocaleString("en-US"),
+  num2: (v) => v.toFixed(2),
+  sec: (v) => v.toFixed(1) + "s",
+  ms: (v) => Math.round(v) + "ms",
+  tok: (v) => {
+    if (v >= 1e9) return (v / 1e9).toFixed(2) + "B";
+    if (v >= 1e6) return (v / 1e6).toFixed(1) + "M";
+    if (v >= 1e3) return (v / 1e3).toFixed(1) + "k";
+    return Math.round(v).toString();
+  },
+};
+
+function fmtDate(d) {
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+// MiniLine: the workhorse.
+//  values: number[]   dates: Date[]
+//  fmt: key of FMT or fn   color: 'accent'|'ink'|'ghost'
+//  axis: show baseline   compare: days-ago window for delta in tip   goodDir: 'up'|'down'|null
+//  height px,  interactive (hover)
+function MiniLine({ values, dates, fmt = "num2", color = "accent", axis = true, height = 160, compare = 7, goodDir = null, interactive = true, padY = 14, padFrac = 0.12 }) {
+  const [hi, setHi] = useState(null);
+  const ref = useRef(null);
+  const fmtFn = typeof fmt === "function" ? fmt : FMT[fmt];
+  const n = values.length;
+
+  const { d } = pathFor(values, height, padY);
+  const min = Math.min(...values), max = Math.max(...values), span = max - min || 1;
+
+  const onMove = useCallback((e) => {
+    if (!interactive || !ref.current) return;
+    const r = ref.current.getBoundingClientRect();
+    const frac = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+    setHi(Math.round(frac * (n - 1)));
+  }, [interactive, n]);
+
+  const xPct = hi != null ? pctX(hi, n) : 0;
+  const yPct = hi != null ? pctY(values[hi], min, span, padFrac) : 0;
+
+  // delta vs `compare` days ago (relative to hovered point)
+  let deltaEl = null;
+  if (hi != null && hi - compare >= 0) {
+    const cur = values[hi], prev = values[hi - compare];
+    const dv = prev !== 0 ? (cur - prev) / Math.abs(prev) : 0;
+    const sign = dv > 0 ? "+" : "";
+    let cls = "";
+    if (goodDir && Math.abs(dv) > 0.002) {
+      const improving = (goodDir === "up" && dv > 0) || (goodDir === "down" && dv < 0);
+      cls = improving ? "g" : "b";
+    }
+    deltaEl = <div className={"tip-delta " + cls}>{sign}{(dv * 100).toFixed(1)}% vs {compare}d ago</div>;
+  }
+
+  // tip clamps to stay on-screen
+  const tipLeft = Math.min(92, Math.max(8, xPct));
+
+  return (
+    <div className="mini" style={{ height }} ref={ref}
+      onMouseMove={onMove} onMouseLeave={() => setHi(null)}>
+      <svg viewBox={`0 0 1000 ${height}`} preserveAspectRatio="none" aria-hidden="true">
+        {axis && <line className="axis" x1="0" y1={height - 0.5} x2="1000" y2={height - 0.5} />}
+        <path className={"line " + color} d={d} />
+      </svg>
+      {hi != null && (
+        <>
+          <div className="guide" style={{ left: xPct + "%" }} />
+          <div className={"knob " + color} style={{ left: xPct + "%", top: yPct + "%" }} />
+          <div className="tip" style={{ left: tipLeft + "%", top: yPct + "%" }}>
+            <div className="tip-date">{dates ? fmtDate(dates[hi]) : "#" + hi}</div>
+            <div className="tip-val">{fmtFn(values[hi])}</div>
+            {deltaEl}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// Sparkline: tiny, no axis, hover knob only (used in KPI strip)
+function Spark({ values, color = "ghost", height = 30 }) {
+  const { d } = pathFor(values, height, 4);
+  return (
+    <div className="mini" style={{ height }}>
+      <svg viewBox={`0 0 1000 ${height}`} preserveAspectRatio="none" aria-hidden="true">
+        <path className={"line " + color} d={d} />
+      </svg>
+    </div>
+  );
+}
+
+// delta badge for KPIs
+function Delta({ values, window: w = 7, goodDir = null }) {
+  const cur = values[values.length - 1];
+  const prev = values[values.length - 1 - w];
+  const dv = prev !== 0 ? (cur - prev) / Math.abs(prev) : 0;
+  const arrow = dv > 0.001 ? "↑" : dv < -0.001 ? "↓" : "→";
+  let cls = "flat";
+  if (goodDir && Math.abs(dv) > 0.002) {
+    const dir = dv > 0 ? "up" : "down";
+    const improving = dir === goodDir;
+    cls = (dir + "-" + (improving ? "good" : "bad"));
+  }
+  const sign = dv > 0 ? "+" : "";
+  return <span className={"delta " + cls}>{arrow} {sign}{(dv * 100).toFixed(1)}%</span>;
+}
+
+// horizontal bar list
+function HBars({ rows, max, fmt = "int", colorFor }) {
+  const m = max || Math.max(...rows.map((r) => r.value));
+  const fmtFn = typeof fmt === "function" ? fmt : FMT[fmt];
+  return (
+    <div className="hbars">
+      {rows.map((r, i) => (
+        <div className="hbar" key={i}>
+          <div className="hb-name">{r.name}</div>
+          <div className="hb-track">
+            <div className="hb-fill" style={{ width: (r.value / m * 100) + "%", background: colorFor ? colorFor(r) : undefined }} />
+          </div>
+          <div className="hb-val">{r.label != null ? r.label : fmtFn(r.value)}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+Object.assign(window, { MiniLine, Spark, Delta, HBars, FMT, fmtDate });
