@@ -67,18 +67,20 @@ function createDailyLog(date = localDate(), now = new Date()) {
 }
 
 function normalizeDailyLog(input, date = localDate(), now = new Date()) {
-  const log = input && typeof input === 'object' ? { ...input } : {};
-  log.schema_version = log.schema_version || 1;
-  log.date = log.date || date;
-  log.updated_at = log.updated_at || now.toISOString();
+  const source = input && typeof input === 'object' ? input : {};
+  const log = {
+    schema_version: source.schema_version || 1,
+    date: source.date || date,
+    updated_at: source.updated_at || now.toISOString(),
+  };
 
-  const totals = { ...(log.totals || {}) };
+  const totals = { ...(source.totals || {}) };
   for (const key of TOTAL_KEYS) {
     totals[key] = Number.isFinite(totals[key]) ? totals[key] : 0;
   }
   log.totals = totals;
 
-  const matches = { ...(log.matches || {}) };
+  const matches = { ...(source.matches || {}) };
   for (const key of MATCH_KEYS) {
     const current = matches[key] || {};
     matches[key] = {

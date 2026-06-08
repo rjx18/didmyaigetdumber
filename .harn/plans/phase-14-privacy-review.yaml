@@ -1,0 +1,62 @@
+id: phase-14-privacy-review
+title: Add aggregate-only privacy safeguards
+assumptions:
+  retire: []
+  create:
+    - id: aggregate-only-safety-checks
+      title: Aggregate-only safety checks
+      statement: Daily log normalization and public telemetry surfaces reject or omit
+        unrecognized raw-content fields while preserving aggregate totals,
+        matches, and percentages, so accidental transcript, path, command, or
+        secret fields are not persisted or served.
+      reason: Phase 14 is the explicit privacy and safety review before final
+        end-to-end verification.
+      depends_on:
+        - daily-aggregate-log-schema
+        - local-aggregate-privacy
+        - daily-report-percentages
+        - local-dashboard-server
+  reviewed:
+    - id: daily-aggregate-log-schema
+      outcome: unchanged
+      reason: Phase 14 tightens normalization to the existing aggregate-only schema.
+    - id: local-aggregate-privacy
+      outcome: unchanged
+      reason: Phase 14 verifies existing privacy constraints across storage and API
+        surfaces.
+    - id: daily-report-percentages
+      outcome: unchanged
+      reason: Phase 14 verifies report-derived API fields remain aggregate-only.
+    - id: local-dashboard-server
+      outcome: unchanged
+      reason: Phase 14 verifies dashboard API output excludes unknown raw fields.
+anchors:
+  aggregate-only-safety-checks:
+    privacy-tests:
+      action: change
+      reason: Verify storage and API surfaces omit raw-content fields.
+    progress-phase-14:
+      action: change
+      reason: Track Phase 14 completion.
+  daily-aggregate-log-schema:
+    store-schema:
+      action: change
+      reason: Drop unknown fields during daily log normalization.
+    store-tests:
+      action: change
+      reason: Verify unknown raw fields are not persisted.
+  doctor-health-checks:
+    progress-phase-13:
+      action: change
+      reason: Replace the Phase 13 placeholder with its actual commit hash.
+  local-aggregate-privacy:
+    progress-privacy-storage:
+      action: keep
+      reason: Privacy assumption remains unchanged.
+files:
+  - src/log-store.js
+  - test/log-store.test.js
+  - test/privacy.test.js
+  - simple-hook-telemetry-progress.md
+applied:
+  applied_at: 2026-06-08T05:45:29.978Z

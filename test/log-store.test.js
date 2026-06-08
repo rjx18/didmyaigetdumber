@@ -14,9 +14,11 @@ const {
   dailyLogPath,
   emptyIncrement,
   ensureDailyLog,
+  normalizeDailyLog,
   readDailyLog,
   releaseDailyLock,
   updateDailyLog,
+  writeDailyLog,
 } = require('../src/log-store');
 
 function tempBase() {
@@ -57,6 +59,26 @@ test('ensures and reads a daily log file', () => {
 
   assert.equal(fs.existsSync(dailyLogPath(date, options)), true);
   assert.equal(readDailyLog(date, options).date, date);
+});
+
+test('normalizes daily logs to aggregate-only fields', () => {
+  const baseDir = tempBase();
+  const date = '2026-06-08';
+  const normalized = normalizeDailyLog({
+    date,
+    raw_prompt: 'sanitized raw prompt',
+    command: 'sanitized command',
+    totals: { user_messages: 1 },
+    matches: { user_patterns: { events: 1, line_hits: 1 } },
+  }, date);
+
+  writeDailyLog(normalized, { baseDir });
+  const fileText = fs.readFileSync(dailyLogPath(date, { baseDir }), 'utf8');
+
+  assert.deepEqual(Object.keys(normalized).sort(), ['date', 'matches', 'schema_version', 'totals', 'updated_at']);
+  assert.equal(fileText.includes('sanitized raw prompt'), false);
+  assert.equal(fileText.includes('sanitized command'), false);
+  assert.equal(readDailyLog(date, { baseDir }).totals.user_messages, 1);
 });
 // harn:end daily-aggregate-log-schema
 

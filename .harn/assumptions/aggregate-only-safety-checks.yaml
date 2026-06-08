@@ -1,0 +1,14 @@
+id: aggregate-only-safety-checks
+hash: a-d6c7d9a302c8
+title: Aggregate-only safety checks
+state: active
+statement: Daily log normalization and public telemetry surfaces reject or omit
+  unrecognized raw-content fields while preserving aggregate totals, matches,
+  and percentages, so accidental transcript, path, command, or secret fields are
+  not persisted or served.
+depends_on:
+  - daily-aggregate-log-schema
+  - local-aggregate-privacy
+  - daily-report-percentages
+  - local-dashboard-server
+created_by: phase-14-privacy-review

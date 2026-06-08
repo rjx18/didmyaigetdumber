@@ -59,7 +59,9 @@
 | 12. Local chart server | `phase-12-local-chart-server` | complete | `a104e3e` | Localhost dashboard and `/api/days`. |
 <!-- harn:end local-dashboard-server -->
 <!-- harn:assume doctor-health-checks ref=progress-phase-13 -->
-| 13. Doctor command | `phase-13-doctor-command` | complete | phase commit | Pattern, log path, lock, and hook checks. |
+| 13. Doctor command | `phase-13-doctor-command` | complete | `393d1ab` | Pattern, log path, lock, and hook checks. |
 <!-- harn:end doctor-health-checks -->
-| 14. Privacy and safety review | pending | pending | pending | Verify no raw text/path/command storage. |
+<!-- harn:assume aggregate-only-safety-checks ref=progress-phase-14 -->
+| 14. Privacy and safety review | `phase-14-privacy-review` | complete | phase commit | Verify no raw text/path/command storage. |
+<!-- harn:end aggregate-only-safety-checks -->
 | 15. Verification | pending | pending | pending | End-to-end simulated hooks/backfill/report/server checks. |
