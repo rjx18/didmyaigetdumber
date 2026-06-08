@@ -1,0 +1,13 @@
+id: daily-report-percentages
+hash: a-a0927e958c93
+title: Daily report percentages
+state: active
+statement: The report command reads aggregate daily log files and displays
+  recent days with total, user, and assistant pattern-hit percentages derived
+  only from message counters and pattern event counters, so users can monitor
+  negative-pattern trends without exposing raw transcript data.
+depends_on:
+  - daily-aggregate-log-schema
+  - local-aggregate-privacy
+  - npm-cli-entrypoint
+created_by: phase-11-report-command

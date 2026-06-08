@@ -1,0 +1,53 @@
+id: phase-11-report-command
+title: Add terminal report command
+assumptions:
+  retire: []
+  create:
+    - id: daily-report-percentages
+      title: Daily report percentages
+      statement: The report command reads aggregate daily log files and displays
+        recent days with total, user, and assistant pattern-hit percentages
+        derived only from message counters and pattern event counters, so users
+        can monitor negative-pattern trends without exposing raw transcript
+        data.
+      reason: The CLI needs a simple terminal view before the chart server is added.
+      depends_on:
+        - daily-aggregate-log-schema
+        - local-aggregate-privacy
+        - npm-cli-entrypoint
+  reviewed:
+    - id: daily-aggregate-log-schema
+      outcome: unchanged
+      reason: Phase 11 reads the existing daily schema without changing storage.
+    - id: local-aggregate-privacy
+      outcome: unchanged
+      reason: Phase 11 renders aggregate counters and percentages only.
+    - id: npm-cli-entrypoint
+      outcome: unchanged
+      reason: The report command route already exists and now calls the implementation.
+anchors:
+  daily-report-percentages:
+    report-format:
+      action: change
+      reason: Implement daily aggregate report loading, percentage calculation, and
+        output formatting.
+    report-tests:
+      action: change
+      reason: Verify report percentages, day filtering, and empty-log behavior.
+    progress-phase-11:
+      action: change
+      reason: Track Phase 11 completion.
+  claude-historical-backfill:
+    progress-phase-10:
+      action: change
+      reason: Replace the Phase 10 placeholder with its actual commit hash.
+  local-aggregate-privacy:
+    progress-privacy-storage:
+      action: keep
+      reason: Privacy assumption remains unchanged.
+files:
+  - src/report.js
+  - test/report.test.js
+  - simple-hook-telemetry-progress.md
+applied:
+  applied_at: 2026-06-08T05:29:31.995Z
