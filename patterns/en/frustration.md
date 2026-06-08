@@ -11,13 +11,11 @@
 \b(?:too\s+fucking\s+easy|very\s+hard\s+is\s+too\s+easy)\b
 \b(?:analyse|analyze)\s+it\s+properly\b
 \bcome\s+up\s+with\s+a\s+proper\s+(?:design|plan|fix)\b
-\bI\s+(?:disabled|checked|tried)\s+EVERY\s+single\b
-\bdon['’]?t\s+gey\s+kiang\b
-\bwhat\s+is\s+wrong\s+with\s+(?:these|this|it)\b
+\bwhat\s+is\s+wrong\s+with\b
 \b(?:figure\s+out|look\s+at)\s+the\s+broken\s+parts\b
 \b(?:hard\s+failures?|hard\s+failed)\b
 \b(?:too\s+aggressive|too\s+strict|too\s+loose)\b
 \b(?:doesn['’]?t|doesnt)\s+make\s+sense\b
-\bwhy\s+(?:tf\s+)?did\s+(?:u|you)\s+even\s+make\s+this\s+test\b
+\bwhy\s+(?:tf\s+)?\b
 \b(?:dumbass|stupid|idiot)\b
 \bwtf\b
