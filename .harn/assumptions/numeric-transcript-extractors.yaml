@@ -1,0 +1,15 @@
+id: numeric-transcript-extractors
+hash: a-dd1f7bda9d3e
+title: Numeric transcript extractors
+state: active
+statement: Codex and Claude transcript extractors convert parsed JSONL records
+  into schema v2 increment objects containing only numeric usage, timing,
+  rate-limit, compaction, and safe model/tool-label counters, so live tailing
+  and historical backfill can share metric extraction without persisting raw
+  text, command arguments, file paths, source excerpts, tool payload content, or
+  token content.
+depends_on:
+  - daily-metrics-log-schema
+  - numeric-transcript-tail-privacy
+  - local-aggregate-privacy
+created_by: metrics-phase-3-numeric-extractors

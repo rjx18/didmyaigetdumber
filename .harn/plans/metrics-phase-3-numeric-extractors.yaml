@@ -1,0 +1,75 @@
+id: metrics-phase-3-numeric-extractors
+title: Add shared numeric transcript extractors
+assumptions:
+  retire: []
+  create:
+    - id: numeric-transcript-extractors
+      title: Numeric transcript extractors
+      statement: Codex and Claude transcript extractors convert parsed JSONL records
+        into schema v2 increment objects containing only numeric usage, timing,
+        rate-limit, compaction, and safe model/tool-label counters, so live
+        tailing and historical backfill can share metric extraction without
+        persisting raw text, command arguments, file paths, source excerpts,
+        tool payload content, or token content.
+      reason: Later backfill and live hook phases need one privacy-preserving numeric
+        extraction path per provider.
+      depends_on:
+        - daily-metrics-log-schema
+        - numeric-transcript-tail-privacy
+        - local-aggregate-privacy
+  reviewed:
+    - id: daily-metrics-log-schema
+      outcome: unchanged
+      reason: The extractors emit schema v2 increment objects; the schema remains
+        aggregate-only while adding turn and compaction counters.
+    - id: numeric-transcript-tail-privacy
+      outcome: unchanged
+      reason: Extractors parse transcript records only to derive numeric counters and
+        safe labels.
+    - id: local-aggregate-privacy
+      outcome: unchanged
+      reason: Extractor output excludes raw prompts, assistant text, tool payload
+        content, commands, paths, and source excerpts.
+    - id: codex-historical-backfill
+      outcome: unchanged
+      reason: Phase 3 adds extractors but does not wire Codex backfill yet.
+    - id: claude-historical-backfill
+      outcome: unchanged
+      reason: Phase 3 adds extractors but does not wire Claude backfill yet.
+anchors:
+  numeric-transcript-extractors:
+    extractor-common:
+      action: change
+      reason: Add shared numeric helpers for safe names, counts, durations, and
+        content length.
+    codex-extractor:
+      action: change
+      reason: Extract Codex token, model, tool, timing, window, and compaction metrics
+        from parsed records.
+    claude-extractor:
+      action: change
+      reason: Extract Claude token, model, tool, timing, and compaction metrics from
+        parsed records.
+    extractor-tests:
+      action: change
+      reason: Verify sanitized Codex/Claude records produce numeric-only increments.
+    progress-phase-3:
+      action: change
+      reason: Track Phase 3 implementation status.
+  daily-metrics-log-schema:
+    store-schema:
+      action: change
+      reason: Add turn and compaction total counters used by numeric extractors.
+    store-tests:
+      action: change
+      reason: Verify new total counters initialize to zero.
+files:
+  - src/log-store.js
+  - src/extractors/common.js
+  - src/extractors/codex.js
+  - src/extractors/claude.js
+  - test/extractors.test.js
+  - test/log-store.test.js
+  - metrics-hooks-backend-progress.md
+applied:
+  applied_at: 2026-06-08T15:00:03.426Z

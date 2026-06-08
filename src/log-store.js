@@ -8,6 +8,7 @@ const SCHEMA_VERSION = 2;
 
 const TOTAL_KEYS = [
   'sessions',
+  'turns',
   'user_messages',
   'assistant_messages',
   'tool_calls',
@@ -15,6 +16,7 @@ const TOTAL_KEYS = [
   'permission_requests',
   'permission_denied',
   'runtime_interrupts',
+  'compactions',
 ];
 
 const MATCH_KEYS = [

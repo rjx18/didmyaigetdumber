@@ -46,6 +46,8 @@ test('creates a schema v2 daily metrics log', () => {
   ]);
   assert.equal(log.schema_version, 2);
   assert.equal(log.date, '2026-06-08');
+  assert.equal(log.totals.turns, 0);
+  assert.equal(log.totals.compactions, 0);
   assert.equal(log.totals.user_messages, 0);
   assert.equal(log.matches.user_1pt.events, 0);
   assert.equal(log.matches.user_2pt.events, 0);

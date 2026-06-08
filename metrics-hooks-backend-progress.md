@@ -21,9 +21,11 @@
 | --- | --- | --- | --- | --- |
 | 1. Spec + privacy contract | `metrics-phase-1-spec-privacy` | complete | `d99aa68` | Define numeric transcript tailing and commit implementation plan. |
 <!-- harn:assume daily-metrics-log-schema ref=progress-phase-2 -->
-| 2. Schema v2 merge primitives | `metrics-phase-2-schema-v2` | complete | phase commit | Add metric blocks and window sample storage. |
+| 2. Schema v2 merge primitives | `metrics-phase-2-schema-v2` | complete | `d7de86d` | Add metric blocks and window sample storage. |
 <!-- harn:end daily-metrics-log-schema -->
-| 3. Shared numeric extractors | pending | pending | pending | Parse Codex/Claude numeric fields without raw content. |
+<!-- harn:assume numeric-transcript-extractors ref=progress-phase-3 -->
+| 3. Shared numeric extractors | `metrics-phase-3-numeric-extractors` | complete | phase commit | Parse Codex/Claude numeric fields without raw content. |
+<!-- harn:end numeric-transcript-extractors -->
 | 4. Backfill metrics | pending | pending | pending | Populate metrics from historical transcripts. |
 | 5. Offset tail store | pending | pending | pending | Persist per-session byte offsets. |
 | 6. Live hook tail integration | pending | pending | pending | Tail active transcripts from low-frequency hooks. |
