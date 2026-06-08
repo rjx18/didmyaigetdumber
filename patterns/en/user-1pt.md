@@ -44,6 +44,8 @@
 \bdid\s+I\s+ask\b
 \bI\s+didn['’]?t\s+ask\s+for\b
 \bmakes\s+no\s+sense\b
+\bare\s+you\s+(?:kidding|serious)\b
+\b(?:damn|goddamn(?:it)?)\b
 
 # steering and interrupts
 \bwait\s+no\b

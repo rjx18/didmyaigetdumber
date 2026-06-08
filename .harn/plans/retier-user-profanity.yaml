@@ -1,0 +1,26 @@
+id: retier-user-profanity
+title: Retier mild user profanity from two-point to one-point
+assumptions:
+  retire: []
+  create: []
+  reviewed:
+    - id: tiered-scope-pattern-files
+      outcome: unchanged
+      reason: Only regex lines move between the existing user-1pt.md and user-2pt.md
+        files; the four-file two-tier layout and comment/blank-line handling are
+        preserved.
+    - id: tiered-pattern-loader
+      outcome: unchanged
+      reason: Loader still maps user scope to all its tier files and compiles each
+        non-comment line case-insensitively; the retiered lines stay RE2-safe
+        with no backreferences or lookaround.
+    - id: local-aggregate-privacy
+      outcome: unchanged
+      reason: Moving regex lines between tier files adds no raw-text storage; logs
+        stay aggregate-only.
+anchors: {}
+files:
+  - patterns/en/user-1pt.md
+  - patterns/en/user-2pt.md
+applied:
+  applied_at: 2026-06-08T13:11:44.696Z
