@@ -11,7 +11,7 @@ const { runBackfill } = require('../src/backfill');
 const { handleHook } = require('../src/hook');
 const { readDailyLog } = require('../src/log-store');
 const { runReport } = require('../src/report');
-const { apiDays, createServer } = require('../src/server');
+const { apiDays, apiMetricsDays, createServer } = require('../src/server');
 
 function tempBase() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'didmyaigetdumber-'));
@@ -66,6 +66,67 @@ function close(server) {
   return new Promise((resolve, reject) => {
     server.close((error) => (error ? reject(error) : resolve()));
   });
+}
+
+function metricSlice(log) {
+  return {
+    turns: log.totals.turns,
+    compactions: log.totals.compactions,
+    tokens: log.tokens,
+    model_tokens: log.model_tokens,
+    tool_output_chars: log.tool_output_chars,
+    tool_calls_by_name: log.tool_calls_by_name,
+    tool_failures_by_name: log.tool_failures_by_name,
+    timings_ms: log.timings_ms,
+    tool_latency_ms_by_name: log.tool_latency_ms_by_name,
+    windows: log.windows,
+  };
+}
+
+function metricFixtureRecords() {
+  const codex = [
+    { timestamp: '2026-06-09T01:00:00.000Z', type: 'session_meta', payload: { cwd: '/private/project' } },
+    { timestamp: '2026-06-09T01:00:01.000Z', type: 'turn_context', payload: { model: 'gpt-5.4', cwd: '/private/project' } },
+    { timestamp: '2026-06-09T01:00:02.000Z', type: 'event_msg', payload: { type: 'task_started' } },
+    { timestamp: '2026-06-09T01:00:05.000Z', type: 'response_item', payload: { type: 'function_call', name: 'Bash', call_id: 'call-1', arguments: 'ignored command text' } },
+    { timestamp: '2026-06-09T01:00:15.000Z', type: 'response_item', payload: { type: 'function_call_output', call_id: 'call-1', output: 'ignored output text' } },
+    {
+      timestamp: '2026-06-09T01:00:20.000Z',
+      type: 'event_msg',
+      payload: {
+        type: 'token_count',
+        info: { last_token_usage: { input_tokens: 100, cached_input_tokens: 20, output_tokens: 30, reasoning_output_tokens: 5, total_tokens: 150 } },
+        rate_limits: { primary: { used_percent: 10, window_minutes: 300, resets_at: 1780901738 } },
+      },
+    },
+    { timestamp: '2026-06-09T01:00:30.000Z', type: 'event_msg', payload: { type: 'task_complete' } },
+  ];
+  const claude = [
+    { timestamp: '2026-06-09T01:01:00.000Z', type: 'user', message: { role: 'user', content: 'private prompt text' } },
+    {
+      timestamp: '2026-06-09T01:01:20.000Z',
+      type: 'assistant',
+      message: {
+        role: 'assistant',
+        model: 'hf:moonshotai/Kimi-K2.6',
+        usage: { input_tokens: 200, cache_read_input_tokens: 50, output_tokens: 40 },
+        content: [
+          { type: 'thinking', thinking: 'private thinking text' },
+          { type: 'text', text: 'assistant private text' },
+          { type: 'tool_use', id: 'toolu-1', name: 'Bash', input: { command: 'ignored command text' } },
+        ],
+      },
+    },
+    {
+      timestamp: '2026-06-09T01:01:50.000Z',
+      type: 'user',
+      message: {
+        role: 'user',
+        content: [{ type: 'tool_result', tool_use_id: 'toolu-1', content: 'ignored tool output', is_error: true }],
+      },
+    },
+  ];
+  return { codex, claude };
 }
 
 // harn:assume end-to-end-verification ref=integration-tests
@@ -159,4 +220,64 @@ test('simulated hook, backfill, report, and server workflow stays aggregate-only
     await close(server);
   }
 });
+
+// harn:assume metrics-end-to-end-verification ref=integration-metrics-tests
+test('backfill and live tailing produce the same metric deltas', async () => {
+  const backfillBase = tempBase();
+  const liveBase = tempBase();
+  const codexSessionsDir = path.join(backfillBase, 'codex-sessions');
+  const claudeProjectsDir = path.join(backfillBase, 'claude-projects');
+  const liveCodexTranscript = path.join(liveBase, 'codex-live.jsonl');
+  const liveClaudeTranscript = path.join(liveBase, 'claude-live.jsonl');
+  const { codex, claude } = metricFixtureRecords();
+
+  writeJsonl(codexFile(codexSessionsDir, '2026-06-09'), codex);
+  writeJsonl(claudeFile(claudeProjectsDir, '2026-06-09'), claude);
+  writeJsonl(liveCodexTranscript, codex);
+  writeJsonl(liveClaudeTranscript, claude);
+
+  assert.equal(await runBackfill('all', { baseDir: backfillBase, codexSessionsDir, claudeProjectsDir }, {
+    stdout: sink(),
+    stderr: sink(),
+  }), 0);
+
+  await handleHook({ baseDir: liveBase }, {
+    stdin: Readable.from([JSON.stringify({
+      event_type: 'Stop',
+      session_id: 'codex-live-session',
+      transcript_path: liveCodexTranscript,
+      timestamp: '2026-06-09T01:00:31.000Z',
+    })]),
+    stdout: sink(),
+    stderr: sink(),
+  });
+  await handleHook({ baseDir: liveBase, agent: 'claude' }, {
+    stdin: Readable.from([JSON.stringify({
+      hook_event_name: 'SessionEnd',
+      session_id: 'claude-live-session',
+      transcript_path: liveClaudeTranscript,
+      timestamp: '2026-06-09T01:02:00.000Z',
+    })]),
+    stdout: sink(),
+    stderr: sink(),
+  });
+
+  const backfillLog = readDailyLog('2026-06-09', { baseDir: backfillBase });
+  const liveLog = readDailyLog('2026-06-09', { baseDir: liveBase });
+  const metricsRows = apiMetricsDays({ baseDir: liveBase, days: 1 });
+  const serialized = JSON.stringify({ backfillLog, liveLog, metricsRows });
+
+  assert.deepEqual(metricSlice(liveLog), metricSlice(backfillLog));
+  assert.equal(metricsRows[0].tokens.input, 300);
+  assert.equal(metricsRows[0].tool_output_share.Bash, 1);
+  assert.equal(metricsRows[0].windows[0].implied_allowance, 1500);
+  assert.equal(serialized.includes('/private/project'), false);
+  assert.equal(serialized.includes('private prompt text'), false);
+  assert.equal(serialized.includes('assistant private text'), false);
+  assert.equal(serialized.includes('private thinking text'), false);
+  assert.equal(serialized.includes('ignored command text'), false);
+  assert.equal(serialized.includes('ignored output text'), false);
+  assert.equal(serialized.includes('ignored tool output'), false);
+});
+// harn:end metrics-end-to-end-verification
 // harn:end end-to-end-verification

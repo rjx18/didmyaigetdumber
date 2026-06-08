@@ -1,0 +1,15 @@
+id: metrics-end-to-end-verification
+hash: a-f53c7ad800da
+title: Metrics end-to-end verification
+state: active
+statement: The test suite compares historical backfill and live transcript
+  tailing over the same sanitized Codex and Claude records, checks the derived
+  metrics API, and verifies serialized logs/API output omit raw prompt,
+  assistant, command, path, tool-output, and source text.
+depends_on:
+  - historical-backfill-numeric-metrics
+  - live-hook-numeric-tail-integration
+  - local-metrics-api
+  - cli-metrics-report
+  - aggregate-only-safety-checks
+created_by: metrics-phase-9-end-to-end-verification

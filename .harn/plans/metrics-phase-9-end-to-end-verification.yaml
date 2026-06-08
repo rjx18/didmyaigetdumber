@@ -1,0 +1,53 @@
+id: metrics-phase-9-end-to-end-verification
+title: Verify metrics backend end to end
+assumptions:
+  retire: []
+  create:
+    - id: metrics-end-to-end-verification
+      title: Metrics end-to-end verification
+      statement: The test suite compares historical backfill and live transcript
+        tailing over the same sanitized Codex and Claude records, checks the
+        derived metrics API, and verifies serialized logs/API output omit raw
+        prompt, assistant, command, path, tool-output, and source text.
+      reason: The metrics backend needs one end-to-end guard across extraction,
+        storage, live tailing, backfill, and API derivation.
+      depends_on:
+        - historical-backfill-numeric-metrics
+        - live-hook-numeric-tail-integration
+        - local-metrics-api
+        - cli-metrics-report
+        - aggregate-only-safety-checks
+  reviewed:
+    - id: end-to-end-verification
+      outcome: unchanged
+      reason: Existing v1 hook/backfill/report/server verification remains in place;
+        this phase adds metrics-specific coverage.
+    - id: historical-backfill-numeric-metrics
+      outcome: unchanged
+      reason: The test consumes existing backfill metric behavior.
+    - id: live-hook-numeric-tail-integration
+      outcome: unchanged
+      reason: The test consumes existing live-tail behavior.
+    - id: local-metrics-api
+      outcome: unchanged
+      reason: The test consumes existing derived metric API behavior.
+    - id: aggregate-only-safety-checks
+      outcome: unchanged
+      reason: The privacy allowlist remains unchanged.
+anchors:
+  metrics-end-to-end-verification:
+    integration-metrics-tests:
+      action: change
+      reason: Add backfill/live metric parity and API privacy coverage.
+    progress-phase-9:
+      action: change
+      reason: Track Phase 9 completion.
+  end-to-end-verification:
+    integration-tests:
+      action: change
+      reason: Extend integration coverage with metrics workflow checks.
+files:
+  - test/integration.test.js
+  - metrics-hooks-backend-progress.md
+applied:
+  applied_at: 2026-06-08T15:27:58.570Z

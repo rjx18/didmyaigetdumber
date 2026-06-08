@@ -39,6 +39,8 @@
 | 7. Local backend API | `metrics-phase-7-local-metrics-api` | complete | `b92c98c` | Return aggregate metrics JSON for future frontend. |
 <!-- harn:end local-metrics-api -->
 <!-- harn:assume cli-metrics-report ref=progress-phase-8 -->
-| 8. CLI metrics report | `metrics-phase-8-cli-metrics-report` | complete | phase commit | Add concise backend validation report. |
+| 8. CLI metrics report | `metrics-phase-8-cli-metrics-report` | complete | `e1b6e74` | Add concise backend validation report. |
 <!-- harn:end cli-metrics-report -->
-| 9. End-to-end verification | pending | pending | pending | Compare backfill/live paths and privacy output. |
+<!-- harn:assume metrics-end-to-end-verification ref=progress-phase-9 -->
+| 9. End-to-end verification | `metrics-phase-9-end-to-end-verification` | complete | phase commit | Compare backfill/live paths and privacy output. |
+<!-- harn:end metrics-end-to-end-verification -->
