@@ -1,0 +1,20 @@
+id: add-metrics-backlog
+title: Add METRICS.md measurement-design backlog
+assumptions:
+  retire: []
+  create: []
+  reviewed:
+    - id: local-aggregate-privacy
+      outcome: unchanged
+      reason: METRICS.md is a design doc only; it adds no code and explicitly keeps
+        the aggregate-only invariant (numbers, not text). No counters or
+        transcripts are written by this change.
+    - id: daily-aggregate-log-schema
+      outcome: unchanged
+      reason: The doc proposes a future schema v2 but changes no code or schema now;
+        the current additive daily-log schema is unchanged by adding the doc.
+anchors: {}
+files:
+  - METRICS.md
+applied:
+  applied_at: 2026-06-08T14:13:26.114Z
