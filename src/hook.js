@@ -4,7 +4,10 @@ const { normalizeCodexPayload } = require('./adapters/codex');
 const { normalizeClaudePayload } = require('./adapters/claude');
 const { incrementFromEvent } = require('./events');
 const { updateDailyLog, localDate } = require('./log-store');
+const { tailJsonlTranscript } = require('./offset-store');
 const { matchPatterns } = require('./patterns');
+const { extractClaudeMetrics } = require('./extractors/claude');
+const { extractCodexMetrics } = require('./extractors/codex');
 
 async function readStdin(stdin) {
   let input = '';
@@ -48,6 +51,74 @@ function detectAgent(payload, options = {}) {
   return 'codex';
 }
 
+function firstString(...values) {
+  for (const value of values) {
+    if (typeof value === 'string' && value.length > 0) {
+      return value;
+    }
+  }
+  return '';
+}
+
+function transcriptPath(payload = {}) {
+  const inner = payload.payload || {};
+  return firstString(payload.transcript_path, payload.transcriptPath, inner.transcript_path, inner.transcriptPath);
+}
+
+function sessionId(payload = {}) {
+  const inner = payload.payload || {};
+  return firstString(payload.session_id, payload.sessionId, payload.conversation_id, inner.session_id, inner.sessionId, inner.conversation_id);
+}
+
+function shouldTailTranscript(agent, eventType) {
+  if (agent === 'codex') {
+    return eventType === 'Stop' || eventType === 'StopFailure';
+  }
+  if (agent === 'claude') {
+    return eventType === 'SessionEnd' || eventType === 'StopFailure';
+  }
+  return false;
+}
+
+function hasMetricData(increment) {
+  return increment.totals.turns > 0
+    || increment.totals.compactions > 0
+    || Object.values(increment.tokens).some((value) => value > 0)
+    || Object.keys(increment.tool_output_chars).length > 0
+    || Object.keys(increment.tool_calls_by_name).length > 0
+    || Object.keys(increment.tool_failures_by_name).length > 0
+    || Object.keys(increment.model_tokens).length > 0
+    || Object.values(increment.timings_ms).some((value) => value > 0)
+    || Object.keys(increment.tool_latency_ms_by_name).length > 0
+    || increment.windows.length > 0;
+}
+
+// harn:assume live-hook-numeric-tail-integration ref=hook-tail
+function liveTailIncrement(agent, payload, normalized, options = {}) {
+  if (!shouldTailTranscript(agent, normalized.event_type)) {
+    return null;
+  }
+
+  const filePath = transcriptPath(payload);
+  if (!filePath) {
+    return null;
+  }
+
+  try {
+    const tail = tailJsonlTranscript(agent, {
+      sessionId: sessionId(payload),
+      transcriptPath: filePath,
+    }, options);
+    const increment = agent === 'claude'
+      ? extractClaudeMetrics(tail.records)
+      : extractCodexMetrics(tail.records);
+    return hasMetricData(increment) ? increment : null;
+  } catch (_error) {
+    return null;
+  }
+}
+// harn:end live-hook-numeric-tail-integration
+
 // harn:assume codex-live-hook-counting ref=hook-runner
 // harn:assume claude-live-hook-counting ref=hook-agent-routing
 async function handleHook(options = {}, io) {
@@ -62,10 +133,20 @@ async function handleHook(options = {}, io) {
   }
 
   const increment = incrementFromEvent(normalized);
-  updateDailyLog(dateForPayload(payload, options), increment, options);
+  const date = dateForPayload(payload, options);
+  updateDailyLog(date, increment, options);
+
+  const metricsIncrement = liveTailIncrement(agent, payload, normalized, options);
+  if (metricsIncrement) {
+    updateDailyLog(date, metricsIncrement, options);
+  }
   return 0;
 }
 // harn:end claude-live-hook-counting
 // harn:end codex-live-hook-counting
 
-module.exports = { handleHook };
+module.exports = {
+  handleHook,
+  liveTailIncrement,
+  shouldTailTranscript,
+};

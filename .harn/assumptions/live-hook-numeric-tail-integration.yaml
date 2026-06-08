@@ -1,0 +1,16 @@
+id: live-hook-numeric-tail-integration
+hash: a-2f692f89f0c2
+title: Live hook numeric tail integration
+state: active
+statement: Low-frequency Codex and Claude live hooks may tail the active
+  transcript_path through the offset store, run provider numeric extractors over
+  complete newly appended JSONL records, and merge the resulting schema v2
+  increments into daily logs, while failures are swallowed so hooks remain
+  non-blocking and raw transcript content is never stored.
+depends_on:
+  - transcript-offset-tail-store
+  - numeric-transcript-extractors
+  - numeric-transcript-tail-privacy
+  - daily-log-locking
+  - daily-metrics-log-schema
+created_by: metrics-phase-6-live-tail-hooks

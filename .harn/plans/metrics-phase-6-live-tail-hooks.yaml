@@ -1,0 +1,82 @@
+id: metrics-phase-6-live-tail-hooks
+title: Tail active transcripts from live hooks
+assumptions:
+  retire: []
+  create:
+    - id: live-hook-numeric-tail-integration
+      title: Live hook numeric tail integration
+      statement: Low-frequency Codex and Claude live hooks may tail the active
+        transcript_path through the offset store, run provider numeric
+        extractors over complete newly appended JSONL records, and merge the
+        resulting schema v2 increments into daily logs, while failures are
+        swallowed so hooks remain non-blocking and raw transcript content is
+        never stored.
+      reason: Live metrics need active-session numeric extraction without changing
+        existing friction-counter behavior or hook reliability.
+      depends_on:
+        - transcript-offset-tail-store
+        - numeric-transcript-extractors
+        - numeric-transcript-tail-privacy
+        - daily-log-locking
+        - daily-metrics-log-schema
+  reviewed:
+    - id: codex-live-hook-counting
+      outcome: unchanged
+      reason: Existing Codex payload-based friction counting remains unchanged; the
+        new numeric tailing path is covered by the live-tail assumption.
+    - id: claude-live-hook-counting
+      outcome: unchanged
+      reason: Existing Claude payload-based friction counting remains unchanged; the
+        new numeric tailing path is covered by the live-tail assumption.
+    - id: transcript-offset-tail-store
+      outcome: unchanged
+      reason: Live hooks consume the offset store as designed.
+    - id: numeric-transcript-extractors
+      outcome: unchanged
+      reason: Live hooks reuse existing numeric-only extractor output.
+    - id: numeric-transcript-tail-privacy
+      outcome: unchanged
+      reason: Tail integration stores numeric aggregates and offset state only.
+    - id: daily-log-locking
+      outcome: unchanged
+      reason: Metrics are merged through the same daily log update path.
+anchors:
+  live-hook-numeric-tail-integration:
+    hook-tail:
+      action: change
+      reason: Tail active transcript files and merge numeric metrics on low-frequency
+        hook events.
+    codex-hook-tail-tests:
+      action: change
+      reason: Verify Codex live tailing merges numeric metrics and does not store
+        transcript content.
+    claude-hook-tail-tests:
+      action: change
+      reason: Verify Claude live tailing merges numeric metrics and does not store
+        transcript content.
+    progress-phase-6:
+      action: change
+      reason: Track Phase 6 implementation status.
+  codex-live-hook-counting:
+    hook-runner:
+      action: change
+      reason: Call the additive live-tail path after existing Codex payload counting.
+    codex-hook-tests:
+      action: change
+      reason: Codex hook tests add numeric tail coverage while preserving existing
+        friction counter assertions.
+  claude-live-hook-counting:
+    hook-agent-routing:
+      action: change
+      reason: Call the additive live-tail path after existing Claude payload counting.
+    claude-hook-tests:
+      action: change
+      reason: Claude hook tests add numeric tail coverage while preserving existing
+        friction counter assertions.
+files:
+  - src/hook.js
+  - test/codex.test.js
+  - test/claude.test.js
+  - metrics-hooks-backend-progress.md
+applied:
+  applied_at: 2026-06-08T15:15:52.938Z

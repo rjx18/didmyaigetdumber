@@ -24,6 +24,11 @@ function sink() {
   });
 }
 
+function writeJsonl(filePath, records) {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, records.map((record) => JSON.stringify(record)).join('\n') + '\n');
+}
+
 // harn:assume codex-live-hook-counting ref=codex-hook-tests
 test('normalizes Codex user prompt payloads', () => {
   const normalized = normalizeCodexPayload({
@@ -55,6 +60,54 @@ test('handles Codex user prompt hooks through aggregate storage', async () => {
   assert.equal(log.matches.user_1pt.events, 1);
   assert.equal(log.matches.user_1pt.line_hits >= 2, true);
 });
+
+// harn:assume live-hook-numeric-tail-integration ref=codex-hook-tail-tests
+test('tails Codex transcripts on stop hooks for numeric metrics', async () => {
+  const baseDir = tempBase();
+  const transcriptPath = path.join(baseDir, 'private-session.jsonl');
+  writeJsonl(transcriptPath, [
+    { timestamp: '2026-06-08T01:00:00.000Z', type: 'turn_context', payload: { model: 'gpt-5.4', cwd: '/private/project' } },
+    { timestamp: '2026-06-08T01:00:01.000Z', type: 'event_msg', payload: { type: 'task_started' } },
+    { timestamp: '2026-06-08T01:00:05.000Z', type: 'response_item', payload: { type: 'function_call', name: 'Bash', call_id: 'call-1', arguments: 'ignored command text' } },
+    { timestamp: '2026-06-08T01:00:15.000Z', type: 'response_item', payload: { type: 'function_call_output', call_id: 'call-1', output: 'ignored output text' } },
+    {
+      timestamp: '2026-06-08T01:00:20.000Z',
+      type: 'event_msg',
+      payload: {
+        type: 'token_count',
+        info: { last_token_usage: { input_tokens: 100, cached_input_tokens: 20, output_tokens: 30, reasoning_output_tokens: 4, total_tokens: 150 } },
+        rate_limits: { primary: { used_percent: 10, window_minutes: 300, resets_at: 1780901738 } },
+      },
+    },
+    { timestamp: '2026-06-08T01:00:30.000Z', type: 'event_msg', payload: { type: 'task_complete' } },
+  ]);
+
+  await handleHook({ baseDir }, {
+    stdin: Readable.from([JSON.stringify({
+      event_type: 'Stop',
+      session_id: 'codex-session-1',
+      transcript_path: transcriptPath,
+      timestamp: '2026-06-08T01:00:31.000Z',
+    })]),
+    stdout: sink(),
+    stderr: sink(),
+  });
+
+  const log = readDailyLog('2026-06-08', { baseDir });
+  const serialized = JSON.stringify(log);
+
+  assert.equal(log.tokens.input, 100);
+  assert.equal(log.tokens.reasoning_output, 4);
+  assert.equal(log.model_tokens['gpt-5.4'].total, 150);
+  assert.equal(log.tool_calls_by_name.Bash, 1);
+  assert.equal(log.tool_output_chars.Bash, 'ignored output text'.length);
+  assert.equal(log.windows[0].tokens_in_window, 150);
+  assert.equal(log.totals.turns, 1);
+  assert.equal(serialized.includes('/private/project'), false);
+  assert.equal(serialized.includes('ignored command text'), false);
+  assert.equal(serialized.includes('ignored output text'), false);
+});
+// harn:end live-hook-numeric-tail-integration
 
 test('merges Codex hook config without duplicating didmyaigetdumber entries', () => {
   const first = mergeCodexHooksConfig({}, '/tmp/dimyd');
