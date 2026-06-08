@@ -47,9 +47,11 @@
 | 8. Historical backfill | `phase-8-backfill-core` | complete | `feb8826` | Shared backfill write behavior. |
 <!-- harn:end backfill-idempotent-writes -->
 <!-- harn:assume codex-historical-backfill ref=progress-phase-9 -->
-| 9. Codex backfill | `phase-9-codex-backfill` | complete | phase commit | Parse `~/.codex/sessions/**/*.jsonl` aggregates only. |
+| 9. Codex backfill | `phase-9-codex-backfill` | complete | `9b406e8` | Parse `~/.codex/sessions/**/*.jsonl` aggregates only. |
 <!-- harn:end codex-historical-backfill -->
-| 10. Claude Code backfill | pending | pending | pending | Parse `~/.claude/projects/**/*.jsonl` aggregates only. |
+<!-- harn:assume claude-historical-backfill ref=progress-phase-10 -->
+| 10. Claude Code backfill | `phase-10-claude-backfill` | complete | phase commit | Parse `~/.claude/projects/**/*.jsonl` aggregates only. |
+<!-- harn:end claude-historical-backfill -->
 | 11. Report command | pending | pending | pending | Terminal daily summary and rates. |
 | 12. Local chart server | pending | pending | pending | Localhost dashboard and `/api/days`. |
 | 13. Doctor command | pending | pending | pending | Pattern, log path, lock, and hook checks. |

@@ -1,0 +1,17 @@
+id: claude-historical-backfill
+hash: a-4ff44a468f8f
+title: Claude Code historical backfill
+state: active
+statement: Claude Code historical backfill parses
+  `~/.claude/projects/**/*.jsonl` records into daily aggregate increments from
+  transcript files, visible user text, visible assistant text, assistant
+  tool-use blocks, explicit errored tool results, and runtime error records, so
+  past Claude Code sessions can seed trend logs without storing raw transcript,
+  path, command, or tool payload fields.
+depends_on:
+  - backfill-idempotent-writes
+  - normalized-event-increments
+  - scope-pattern-loader
+  - claude-live-hook-counting
+  - local-aggregate-privacy
+created_by: phase-10-claude-backfill

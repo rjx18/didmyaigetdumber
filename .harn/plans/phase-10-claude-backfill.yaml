@@ -1,0 +1,85 @@
+id: phase-10-claude-backfill
+title: Add Claude Code historical backfill
+assumptions:
+  retire: []
+  create:
+    - id: claude-historical-backfill
+      title: Claude Code historical backfill
+      statement: Claude Code historical backfill parses
+        `~/.claude/projects/**/*.jsonl` records into daily aggregate increments
+        from transcript files, visible user text, visible assistant text,
+        assistant tool-use blocks, explicit errored tool results, and runtime
+        error records, so past Claude Code sessions can seed trend logs without
+        storing raw transcript, path, command, or tool payload fields.
+      reason: Users need the `backfill claude` command and `init claude --backfill`
+        flag to populate daily percentages from existing local Claude Code logs.
+      depends_on:
+        - backfill-idempotent-writes
+        - normalized-event-increments
+        - scope-pattern-loader
+        - claude-live-hook-counting
+        - local-aggregate-privacy
+  reviewed:
+    - id: backfill-idempotent-writes
+      outcome: unchanged
+      reason: Phase 10 writes parsed Claude aggregates through the shared backfill
+        writer.
+    - id: normalized-event-increments
+      outcome: unchanged
+      reason: Phase 10 converts parsed Claude records into the existing increment
+        model.
+    - id: scope-pattern-loader
+      outcome: unchanged
+      reason: Phase 10 uses the existing pattern loader for user and assistant text.
+    - id: claude-live-hook-counting
+      outcome: unchanged
+      reason: Phase 10 adds historical parsing and optional init backfill without
+        changing live hook payload counting.
+    - id: codex-historical-backfill
+      outcome: unchanged
+      reason: Phase 10 extends the shared dispatcher to include Claude while
+        preserving Codex backfill behavior.
+    - id: local-aggregate-privacy
+      outcome: unchanged
+      reason: Phase 10 parses transcript text in memory only and stores aggregate
+        counters.
+anchors:
+  claude-historical-backfill:
+    claude-backfill-parser:
+      action: change
+      reason: Parse Claude Code project JSONL files into daily aggregate increments.
+    claude-backfill-dispatch:
+      action: change
+      reason: Route `backfill claude` and complete `backfill all`.
+    claude-backfill-init:
+      action: change
+      reason: Run Claude backfill when `init claude --backfill` is set.
+    claude-backfill-tests:
+      action: change
+      reason: Verify sanitized Claude JSONL backfill behavior and privacy boundaries.
+    progress-phase-10:
+      action: change
+      reason: Track Phase 10 completion.
+  codex-historical-backfill:
+    codex-backfill-dispatch:
+      action: change
+      reason: Update shared dispatcher so `all` runs Claude after Codex.
+    progress-phase-9:
+      action: change
+      reason: Replace the Phase 9 placeholder with its actual commit hash.
+  claude-live-hook-counting:
+    claude-init:
+      action: change
+      reason: Add optional historical backfill after installing Claude hooks.
+  local-aggregate-privacy:
+    progress-privacy-storage:
+      action: keep
+      reason: Privacy assumption remains unchanged.
+files:
+  - src/backfill.js
+  - src/backfills/claude.js
+  - src/init/claude.js
+  - test/claude-backfill.test.js
+  - simple-hook-telemetry-progress.md
+applied:
+  applied_at: 2026-06-08T05:26:38.498Z

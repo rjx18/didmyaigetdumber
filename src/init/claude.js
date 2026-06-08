@@ -4,6 +4,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { CLAUDE_HOOK_EVENTS } = require('../adapters/claude');
+const { runClaudeBackfill } = require('../backfills/claude');
 
 function defaultClaudeSettingsPath() {
   return path.join(os.homedir(), '.claude', 'settings.json');
@@ -54,6 +55,11 @@ async function initClaude(options = {}, io) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, `${JSON.stringify(merged, null, 2)}\n`);
   io.stdout.write(`installed claude hooks: ${filePath}\n`);
+  // harn:assume claude-historical-backfill ref=claude-backfill-init
+  if (options.backfill) {
+    return runClaudeBackfill(options, io);
+  }
+  // harn:end claude-historical-backfill
   return 0;
 }
 // harn:end claude-live-hook-counting

@@ -31,6 +31,13 @@ function dailyLogFromIncrement(date, increment) {
   return applyIncrement(createDailyLog(date), increment);
 }
 
+function mergeDayMaps(target, source) {
+  for (const [date, increment] of source.entries()) {
+    groupIncrement(target, date, increment);
+  }
+  return target;
+}
+
 // harn:assume backfill-idempotent-writes ref=backfill-write-core
 function writeBackfillDays(dayMap, options = {}) {
   const result = { created: 0, skipped: 0, overwritten: 0 };
@@ -58,22 +65,41 @@ function writeBackfillDays(dayMap, options = {}) {
 // harn:end backfill-idempotent-writes
 
 // harn:assume codex-historical-backfill ref=codex-backfill-dispatch
+// harn:assume claude-historical-backfill ref=claude-backfill-dispatch
 async function runBackfill(target, options, io) {
   if (target === 'codex') {
     const { runCodexBackfill } = require('./backfills/codex');
     return runCodexBackfill(options, io);
   }
 
+  if (target === 'claude') {
+    const { runClaudeBackfill } = require('./backfills/claude');
+    return runClaudeBackfill(options, io);
+  }
+
   if (target === 'all') {
-    const { runCodexBackfill } = require('./backfills/codex');
-    const codexCode = await runCodexBackfill(options, io);
-    io.stdout.write('claude backfill is not implemented yet\n');
-    return codexCode;
+    const { collectCodexBackfill } = require('./backfills/codex');
+    const { collectClaudeBackfill } = require('./backfills/claude');
+    const codex = collectCodexBackfill(options);
+    const claude = collectClaudeBackfill(options);
+    const dayMap = new Map();
+    mergeDayMaps(dayMap, codex.dayMap);
+    mergeDayMaps(dayMap, claude.dayMap);
+    const writeResult = writeBackfillDays(dayMap, options);
+    const malformed = codex.summary.malformed + claude.summary.malformed;
+    io.stdout.write(
+      `all backfill: codex_files=${codex.summary.files} claude_files=${claude.summary.files} days=${dayMap.size} created=${writeResult.created} skipped=${writeResult.skipped} overwritten=${writeResult.overwritten}\n`
+    );
+    if (malformed > 0) {
+      io.stdout.write(`all backfill skipped malformed lines: ${malformed}\n`);
+    }
+    return 0;
   }
 
   io.stdout.write(`${target} backfill is not implemented yet\n`);
   return 0;
 }
+// harn:end claude-historical-backfill
 // harn:end codex-historical-backfill
 
 module.exports = {
