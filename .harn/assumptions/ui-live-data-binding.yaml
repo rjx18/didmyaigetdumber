@@ -1,0 +1,13 @@
+id: ui-live-data-binding
+hash: a-62c4686586de
+title: UI live data binding
+state: active
+statement: The dashboard populates its data by fetching `/api/ui` from the
+  same-origin server at load and renders only from that response, showing
+  distinct empty and error states when no daily logs exist or the fetch fails,
+  with a `?demo=1` escape hatch that renders deterministic synthetic data for
+  design iteration.
+depends_on:
+  - ui-aggregate-data-endpoint
+  - ui-static-asset-serving
+created_by: frontend-phase-3-live-data

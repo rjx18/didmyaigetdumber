@@ -10,7 +10,34 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
 
 const ACCENTS = ["#5b6b97", "#6b7a72", "#8a7a6b", "#7a6b8a", "#4f4f55"];
 
+// harn:assume ui-live-data-binding ref=ui-app-states
+// Shown when /api/ui returned no daily logs (empty) or the fetch failed (error).
+// Reuses the status classes so the message matches the dashboard's visual language.
+function DataNotice({ state }) {
+  const empty = state === "empty";
+  return (
+    <div className="hero" style={{ display: "block" }}>
+      <div className="status-label">{empty ? "No data yet" : "Couldn’t load data"}</div>
+      <div className="status-line">
+        <span className={"status-pulse " + (empty ? "" : "bad bad-bg")} />
+        <span className="status-word">{empty ? "Nothing tracked" : "Offline"}</span>
+      </div>
+      <div className="status-reason">
+        {empty
+          ? "No sessions have been recorded yet. Run a Codex or Claude Code session, or backfill history, then refresh."
+          : "The dashboard could not reach the local /api/ui endpoint."}
+        {!empty && window.DATA_ERROR ? <span className="num"> ({window.DATA_ERROR})</span> : null}
+        <div className="num" style={{ marginTop: 10, color: "var(--faint)" }}>
+          {empty ? "didmyaigetdumber backfill all" : "didmyaigetdumber start"}
+        </div>
+      </div>
+    </div>
+  );
+}
+// harn:end ui-live-data-binding
+
 function App() {
+  const dataState = window.DATA_STATE || "ok";
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
   const [section, setSection] = useState(() => localStorage.getItem("ait_section") || "friction");
   const detailRef = useRef(null);
@@ -54,12 +81,18 @@ function App() {
 
       <main>
         <div className="page wrap">
-          <Hero />
-          <HeadlineMetrics onPick={goTo} />
-          <div ref={detailRef} className="detail">
-            <SubNav active={section} onChange={setSection} />
-            <SectionDetail id={section} />
-          </div>
+          {dataState === "ok" ? (
+            <>
+              <Hero />
+              <HeadlineMetrics onPick={goTo} />
+              <div ref={detailRef} className="detail">
+                <SubNav active={section} onChange={setSection} />
+                <SectionDetail id={section} />
+              </div>
+            </>
+          ) : (
+            <DataNotice state={dataState} />
+          )}
         </div>
       </main>
 

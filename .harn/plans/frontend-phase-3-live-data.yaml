@@ -1,0 +1,39 @@
+id: frontend-phase-3-live-data
+title: Wire live data into the dashboard UI
+assumptions:
+  retire: []
+  create:
+    - id: ui-live-data-binding
+      title: UI live data binding
+      statement: The dashboard populates its data by fetching `/api/ui` from the
+        same-origin server at load and renders only from that response, showing
+        distinct empty and error states when no daily logs exist or the fetch
+        fails, with a `?demo=1` escape hatch that renders deterministic
+        synthetic data for design iteration.
+      reason: The UI must show real aggregate metrics instead of the synthetic
+        data.js, and degrade gracefully when there is no data.
+      depends_on:
+        - ui-aggregate-data-endpoint
+        - ui-static-asset-serving
+  reviewed:
+    - id: ui-offline-vendored-assets
+      outcome: unchanged
+      reason: The added fetch targets the same-origin `/api/ui`; no external or CDN
+        request is introduced.
+anchors:
+  ui-live-data-binding:
+    ui-data-loader:
+      action: change
+      reason: Fetch and adapt /api/ui at load; demo and empty/error fallbacks.
+    ui-app-states:
+      action: change
+      reason: Render empty and error screens based on the load state.
+    progress-phase-3:
+      action: change
+      reason: Track Phase 3 implementation status.
+files:
+  - src/ui/data.js
+  - src/ui/app.jsx
+  - frontend-dashboard-progress.md
+applied:
+  applied_at: 2026-06-08T18:05:30.213Z

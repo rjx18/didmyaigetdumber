@@ -20,7 +20,9 @@ Implements `tmp/plan/frontend-dashboard.md`: ship the `ai tracker` mockup as the
 <!-- harn:assume ui-aggregate-data-endpoint ref=progress-phase-2 -->
 | 2. Aggregate UI data endpoint | `frontend-phase-2-ui-data-endpoint` | complete | phase commit | `GET /api/ui?days=N` aggregate-only payload. |
 <!-- harn:end ui-aggregate-data-endpoint -->
-| 3. Wire live data into the UI | `frontend-phase-3-live-data` | planned | — | Replace synthetic `data.js`; loading/empty states. |
+<!-- harn:assume ui-live-data-binding ref=progress-phase-3 -->
+| 3. Wire live data into the UI | `frontend-phase-3-live-data` | complete | phase commit | Replace synthetic `data.js`; empty/error states; `?demo=1`. |
+<!-- harn:end ui-live-data-binding -->
 | 4. Close metric gaps / prune | `frontend-phase-4-metric-gaps` | planned | — | Friction tiers; remove unsupported elements. |
 | 5. Polish, offline + start wiring | `frontend-phase-5-polish` | planned | — | Fonts, responsive, docs. |
 | 6. End-to-end verification | `frontend-phase-6-e2e` | planned | — | Full test + privacy + offline pass. |
