@@ -202,4 +202,26 @@ test('backfill all merges Codex and Claude same-day aggregates before writing', 
   assert.equal(log.totals.user_messages, 2);
   assert.equal(log.matches.user_patterns.events, 2);
 });
+
+test('skips Claude sessions in the didmyaigetdumber project', () => {
+  const baseDir = tempBase();
+  const claudeProjectsDir = path.join(baseDir, 'projects');
+  const selfFile = path.join(claudeProjectsDir, '-home-xiongjr-git-didmyaigetdumber', '2026-06-08-session.jsonl');
+
+  writeJsonl(selfFile, [
+    {
+      timestamp: '2026-06-08T01:00:00.000Z',
+      type: 'user',
+      message: { role: 'user', content: 'this is wrong' },
+    },
+  ]);
+
+  const excluded = backfillClaude({ baseDir, claudeProjectsDir });
+  assert.equal(excluded.files, 0);
+  assert.equal(excluded.days, 0);
+
+  const included = backfillClaude({ baseDir, claudeProjectsDir, overwrite: true, excludeProject: null });
+  assert.equal(included.files, 1);
+  assert.equal(included.days, 1);
+});
 // harn:end claude-historical-backfill

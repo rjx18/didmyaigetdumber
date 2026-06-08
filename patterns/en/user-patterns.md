@@ -43,7 +43,7 @@
 \b(?:do\s+not|don['’]?t|dont)\s+commit\b
 \b(?:don['’]?t|dont|do\s+not)\s+change\s+anything\b
 \bnever\s+mind\b
-\b(?:undo|unstage|revert)\b
+\b(?:undo|revert)\s+(?:that|this|it|your|the\s+(?:last|change|commit|edit))\b
 \b(?:pause|cancel|stop)\s+(?:that|this|now|it)\b
 \b(?:like|as)\s+I\s+(?:said|told\s+you|mentioned|asked)\b
 \byou\s+keep\s+(?:doing|making|breaking|ignoring|adding|removing)\b
@@ -53,7 +53,7 @@
 \bmakes\s+no\s+sense\b
 \byou\s+broke\b
 \bbroke\s+the\s+(?:build|tests?|app)\b
-\bregression\b
+\b(?:caused|introduced|that['’]?s)\s+(?:a\s+)?regression\b
 \b(?:ffs|ugh|argh|smh)\b
 \bseriously\?+
 \bare\s+you\s+kidding\b

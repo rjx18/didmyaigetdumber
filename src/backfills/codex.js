@@ -8,8 +8,28 @@ const { emptyIncrement, localDate } = require('../log-store');
 const { matchPatterns, loadPatterns } = require('../patterns');
 const { groupIncrement, writeBackfillDays } = require('../backfill');
 
+const SELF_PROJECT_PATTERN = /didmyaigetdumber/i;
+
 function defaultCodexSessionsDir() {
   return path.join(os.homedir(), '.codex', 'sessions');
+}
+
+function sessionCwd(lines) {
+  for (const line of lines) {
+    if (!line.trim()) {
+      continue;
+    }
+    let record;
+    try {
+      record = JSON.parse(line);
+    } catch (_error) {
+      continue;
+    }
+    if (record.type === 'session_meta') {
+      return (record.payload && record.payload.cwd) || '';
+    }
+  }
+  return '';
 }
 
 function findJsonlFiles(root) {
@@ -113,6 +133,7 @@ function collectCodexBackfill(options = {}) {
     user: loadPatterns('user', options),
     assistant: loadPatterns('assistant', options),
   };
+  const excludeProject = options.excludeProject === undefined ? SELF_PROJECT_PATTERN : options.excludeProject;
   const dayMap = new Map();
   const summary = {
     files: 0,
@@ -121,13 +142,21 @@ function collectCodexBackfill(options = {}) {
   };
 
   for (const filePath of files) {
+    const lines = fs.readFileSync(filePath, 'utf8').split(/\r?\n/);
+
+    // harn:assume backfill-excludes-self-sessions ref=codex-self-exclusion
+    if (excludeProject && excludeProject.test(sessionCwd(lines))) {
+      continue;
+    }
+    // harn:end backfill-excludes-self-sessions
+
     const fallbackDate = dateFromFilePath(filePath);
     let sessionDate = fallbackDate;
     let sessionCounted = false;
     let countableRecords = 0;
 
     summary.files += 1;
-    for (const line of fs.readFileSync(filePath, 'utf8').split(/\r?\n/)) {
+    for (const line of lines) {
       if (!line.trim()) {
         continue;
       }

@@ -8,6 +8,8 @@ const { emptyIncrement, localDate } = require('../log-store');
 const { matchPatterns, loadPatterns } = require('../patterns');
 const { groupIncrement, writeBackfillDays } = require('../backfill');
 
+const SELF_PROJECT_PATTERN = /didmyaigetdumber/i;
+
 function defaultClaudeProjectsDir() {
   return path.join(os.homedir(), '.claude', 'projects');
 }
@@ -115,6 +117,7 @@ function collectClaudeBackfill(options = {}) {
     user: loadPatterns('user', options),
     assistant: loadPatterns('assistant', options),
   };
+  const excludeProject = options.excludeProject === undefined ? SELF_PROJECT_PATTERN : options.excludeProject;
   const dayMap = new Map();
   const summary = {
     files: 0,
@@ -123,6 +126,12 @@ function collectClaudeBackfill(options = {}) {
   };
 
   for (const filePath of files) {
+    // harn:assume backfill-excludes-self-sessions ref=claude-self-exclusion
+    if (excludeProject && excludeProject.test(path.relative(projectsDir, filePath))) {
+      continue;
+    }
+    // harn:end backfill-excludes-self-sessions
+
     const fallbackDate = dateFromFilePath(filePath);
     let sessionDate = fallbackDate;
     let countableRecords = 0;

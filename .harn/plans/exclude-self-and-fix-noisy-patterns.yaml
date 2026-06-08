@@ -1,0 +1,58 @@
+id: exclude-self-and-fix-noisy-patterns
+title: Exclude own sessions from backfill and fix noisy user patterns
+assumptions:
+  retire: []
+  create:
+    - id: backfill-excludes-self-sessions
+      title: Backfill excludes didmyaigetdumber's own sessions
+      statement: Historical backfill skips Codex sessions whose `session_meta` cwd
+        matches the didmyaigetdumber repo and Claude sessions whose transcript
+        path matches it, so the tool's own development conversations do not bias
+        friction trend metrics; the exclusion is overridable through an
+        `excludeProject` option.
+      reason: Pattern-design discussion in this repo's own transcripts matches the
+        friction patterns and skews the already sparse assistant signal.
+      depends_on:
+        - codex-historical-backfill
+        - claude-historical-backfill
+  reviewed:
+    - id: two-scope-pattern-files
+      outcome: unchanged
+      reason: User pattern edits keep the two-file, one-regex-per-line layout.
+    - id: scope-pattern-loader
+      outcome: unchanged
+      reason: Refined revert and regression regexes still compile case-insensitively
+        and stay RE2-safe.
+    - id: local-aggregate-privacy
+      outcome: unchanged
+      reason: Exclusion only skips whole files; no raw transcript fields are stored.
+anchors:
+  codex-historical-backfill:
+    codex-backfill-parser:
+      action: change
+      reason: Add the self-session skip inside the file loop.
+    codex-backfill-tests:
+      action: change
+      reason: Cover Codex cwd-based self-session exclusion and its override.
+  claude-historical-backfill:
+    claude-backfill-parser:
+      action: change
+      reason: Add the self-session skip inside the file loop.
+    claude-backfill-tests:
+      action: change
+      reason: Cover Claude path-based self-session exclusion and its override.
+  backfill-excludes-self-sessions:
+    codex-self-exclusion:
+      action: change
+      reason: New anchor wrapping the Codex cwd skip decision.
+    claude-self-exclusion:
+      action: change
+      reason: New anchor wrapping the Claude path skip decision.
+files:
+  - patterns/en/user-patterns.md
+  - src/backfills/codex.js
+  - src/backfills/claude.js
+  - test/codex-backfill.test.js
+  - test/claude-backfill.test.js
+applied:
+  applied_at: 2026-06-08T07:33:55.162Z

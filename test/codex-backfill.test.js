@@ -162,4 +162,30 @@ test('runs Codex backfill through dispatcher and init backfill flag', async () =
   assert.equal(log.totals.sessions, 1);
   assert.equal(log.totals.user_messages, 1);
 });
+
+test('skips Codex sessions whose cwd is the didmyaigetdumber repo', () => {
+  const baseDir = tempBase();
+  const codexSessionsDir = path.join(baseDir, 'sessions');
+
+  writeJsonl(sessionFile(codexSessionsDir), [
+    {
+      timestamp: '2026-06-08T01:00:00.000Z',
+      type: 'session_meta',
+      payload: { timestamp: '2026-06-08T01:00:00.000Z', cwd: '/home/xiongjr/git/didmyaigetdumber' },
+    },
+    {
+      timestamp: '2026-06-08T01:01:00.000Z',
+      type: 'event_msg',
+      payload: { type: 'user_message', message: 'this is wrong' },
+    },
+  ]);
+
+  const excluded = backfillCodex({ baseDir, codexSessionsDir });
+  assert.equal(excluded.files, 0);
+  assert.equal(excluded.days, 0);
+
+  const included = backfillCodex({ baseDir, codexSessionsDir, overwrite: true, excludeProject: null });
+  assert.equal(included.files, 1);
+  assert.equal(included.days, 1);
+});
 // harn:end codex-historical-backfill
