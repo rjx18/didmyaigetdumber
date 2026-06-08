@@ -29,9 +29,9 @@
 <!-- harn:assume tiered-pattern-loader ref=progress-phase-2 -->
 | 2. Pattern loader | `phase-2-pattern-loader` | complete | `7509c94` | Compile tiered scope pattern files and return line hits. |
 <!-- harn:end tiered-pattern-loader -->
-<!-- harn:assume daily-aggregate-log-schema ref=progress-phase-3 -->
+<!-- harn:assume daily-metrics-log-schema ref=progress-phase-3 -->
 | 3. Minimal local storage | `phase-3-log-store` | complete | `ea400d1` | Daily schema and default counters. |
-<!-- harn:end daily-aggregate-log-schema -->
+<!-- harn:end daily-metrics-log-schema -->
 <!-- harn:assume daily-log-locking ref=progress-phase-4 -->
 | 4. Locking and atomic writes | `phase-4-locking` | complete | `0ba2a96` | Busy-wait lock and atomic JSON writes. |
 <!-- harn:end daily-log-locking -->

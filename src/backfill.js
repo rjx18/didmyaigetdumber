@@ -5,24 +5,19 @@ const {
   applyIncrement,
   createDailyLog,
   dailyLogPath,
+  emptyIncrement,
+  mergeIncrementFields,
   writeDailyLogAtomic,
   withDailyLogLock,
 } = require('./log-store');
 
+// harn:assume backfill-idempotent-writes ref=backfill-write-core
 function mergeIncrement(target, increment) {
-  for (const [key, value] of Object.entries(increment.totals || {})) {
-    target.totals[key] = (target.totals[key] || 0) + value;
-  }
-  for (const [key, value] of Object.entries(increment.matches || {})) {
-    target.matches[key] ||= { events: 0, line_hits: 0 };
-    target.matches[key].events += value.events || 0;
-    target.matches[key].line_hits += value.line_hits || 0;
-  }
-  return target;
+  return mergeIncrementFields(target, increment);
 }
 
 function groupIncrement(dayMap, date, increment) {
-  const current = dayMap.get(date) || { totals: {}, matches: {} };
+  const current = dayMap.get(date) || emptyIncrement();
   dayMap.set(date, mergeIncrement(current, increment));
   return dayMap;
 }
@@ -38,7 +33,6 @@ function mergeDayMaps(target, source) {
   return target;
 }
 
-// harn:assume backfill-idempotent-writes ref=backfill-write-core
 function writeBackfillDays(dayMap, options = {}) {
   const result = { created: 0, skipped: 0, overwritten: 0 };
 

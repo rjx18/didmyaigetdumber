@@ -1,0 +1,14 @@
+id: daily-metrics-log-schema
+hash: a-1e90005ad824
+title: Daily metrics log schema
+state: active
+statement: Daily telemetry logs contain date-scoped aggregate counters for
+  totals, pattern matches, numeric token and timing metrics, safe
+  model/tool-name maps, and append-only rate-limit window samples, so reports
+  and APIs can derive metrics without storing raw text, file paths, command
+  text, source excerpts, or token content.
+depends_on:
+  - local-aggregate-privacy
+  - tiered-pattern-loader
+  - numeric-transcript-tail-privacy
+created_by: metrics-phase-2-schema-v2

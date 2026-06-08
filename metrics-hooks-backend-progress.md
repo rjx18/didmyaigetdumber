@@ -19,8 +19,10 @@
 
 | Phase | Harn plan | Status | Commit | Notes |
 | --- | --- | --- | --- | --- |
-| 1. Spec + privacy contract | `metrics-phase-1-spec-privacy` | in progress | pending | Define numeric transcript tailing and commit implementation plan. |
-| 2. Schema v2 merge primitives | pending | pending | pending | Add metric blocks and window sample storage. |
+| 1. Spec + privacy contract | `metrics-phase-1-spec-privacy` | complete | `d99aa68` | Define numeric transcript tailing and commit implementation plan. |
+<!-- harn:assume daily-metrics-log-schema ref=progress-phase-2 -->
+| 2. Schema v2 merge primitives | `metrics-phase-2-schema-v2` | complete | phase commit | Add metric blocks and window sample storage. |
+<!-- harn:end daily-metrics-log-schema -->
 | 3. Shared numeric extractors | pending | pending | pending | Parse Codex/Claude numeric fields without raw content. |
 | 4. Backfill metrics | pending | pending | pending | Populate metrics from historical transcripts. |
 | 5. Offset tail store | pending | pending | pending | Persist per-session byte offsets. |

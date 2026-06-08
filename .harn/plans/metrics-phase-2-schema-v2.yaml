@@ -1,0 +1,110 @@
+id: metrics-phase-2-schema-v2
+title: Add schema v2 metric merge primitives
+assumptions:
+  retire:
+    - id: daily-aggregate-log-schema
+      reason: Daily logs now need schema v2 metric blocks in addition to totals and
+        pattern matches.
+  create:
+    - id: daily-metrics-log-schema
+      title: Daily metrics log schema
+      statement: Daily telemetry logs contain date-scoped aggregate counters for
+        totals, pattern matches, numeric token and timing metrics, safe
+        model/tool-name maps, and append-only rate-limit window samples, so
+        reports and APIs can derive metrics without storing raw text, file
+        paths, command text, source excerpts, or token content.
+      reason: Metrics extraction needs additive storage and deterministic merge
+        behavior while preserving aggregate-only local privacy.
+      depends_on:
+        - local-aggregate-privacy
+        - tiered-pattern-loader
+        - numeric-transcript-tail-privacy
+  reviewed:
+    - id: local-aggregate-privacy
+      outcome: unchanged
+      reason: The new fields are numeric aggregates or safe model/tool labels; raw
+        prompts, assistant messages, paths, commands, source excerpts, and token
+        content remain excluded.
+    - id: numeric-transcript-tail-privacy
+      outcome: unchanged
+      reason: This phase adds storage primitives only; live transcript tailing remains
+        limited to numeric extraction.
+    - id: tiered-pattern-loader
+      outcome: unchanged
+      reason: Pattern category names and line-hit counters remain unchanged.
+    - id: backfill-idempotent-writes
+      outcome: unchanged
+      reason: Backfill still groups by date and writes idempotent daily aggregates,
+        now using shared schema v2 merge primitives.
+    - id: daily-log-locking
+      outcome: unchanged
+      reason: Locking still wraps the read-apply-write critical section.
+    - id: daily-report-percentages
+      outcome: unchanged
+      reason: Existing report percentages continue to read totals and match counters
+        from normalized daily logs.
+    - id: normalized-event-increments
+      outcome: unchanged
+      reason: Existing live events still produce aggregate increment objects; the
+        increment shape is widened compatibly for later numeric extractors.
+    - id: aggregate-only-safety-checks
+      outcome: unchanged
+      reason: Privacy checks continue to enforce allowlisted aggregate fields.
+anchors:
+  daily-aggregate-log-schema:
+    store-schema:
+      action: remove
+      reason: Replace the aggregate-only schema anchor with the schema v2 metrics
+        contract.
+    store-tests:
+      action: remove
+      reason: Replace aggregate-only storage tests with schema v2 storage tests.
+    progress-phase-3:
+      action: remove
+      reason: Progress notes should reference the current schema assumption.
+  daily-metrics-log-schema:
+    store-schema:
+      action: change
+      reason: Add schema v2 defaults, normalization, and merge helpers.
+    store-tests:
+      action: change
+      reason: Verify v2 defaults, v1 compatibility, map merges, and window append
+        behavior.
+    progress-phase-3:
+      action: change
+      reason: Update prior progress notes to name the current daily schema contract.
+    progress-phase-2:
+      action: change
+      reason: Track this metrics backend phase.
+  backfill-idempotent-writes:
+    backfill-write-core:
+      action: change
+      reason: Use shared schema v2 merge helpers for grouped backfill increments.
+    backfill-core-tests:
+      action: change
+      reason: Verify grouped backfill increments preserve schema v2 metric blocks.
+  daily-log-locking:
+    lock-tests:
+      action: change
+      reason: Locking tests use widened metric increment objects.
+  aggregate-only-safety-checks:
+    privacy-tests:
+      action: change
+      reason: Privacy tests should allow only aggregate metric fields and reject raw
+        content fields.
+  local-aggregate-privacy:
+    spec-privacy-storage:
+      action: change
+      reason: Document that daily logs may include numeric metrics and safe labels
+        while remaining aggregate-only.
+files:
+  - src/log-store.js
+  - src/backfill.js
+  - test/log-store.test.js
+  - test/backfill.test.js
+  - test/privacy.test.js
+  - SPEC.md
+  - simple-hook-telemetry-progress.md
+  - metrics-hooks-backend-progress.md
+applied:
+  applied_at: 2026-06-08T14:55:16.711Z

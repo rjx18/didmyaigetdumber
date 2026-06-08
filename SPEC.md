@@ -269,6 +269,8 @@ Never write:
 - API keys or secrets
 
 Optional debug mode may write raw event JSON to `~/.didmyaigetdumber/debug/`, but it must be off by default and excluded from upload.
+
+Daily logs may store numeric sums, counts, timings, rate-limit percentages, token counts, and safe model/tool labels. These remain aggregate telemetry fields, not transcript content.
 <!-- harn:end local-aggregate-privacy -->
 
 <!-- harn:assume numeric-transcript-tail-privacy ref=spec-numeric-tail-privacy -->
