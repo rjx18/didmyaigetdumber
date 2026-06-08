@@ -1,0 +1,14 @@
+id: transcript-offset-tail-store
+hash: a-a6b905be0639
+title: Transcript offset tail store
+state: active
+statement: Live transcript tailing stores local operational cursors under
+  `~/.didmyaigetdumber/offsets/` keyed by provider plus a safe session key,
+  reads only complete newly appended JSONL lines, resets safely on truncation or
+  replacement, and persists byte offsets, size/inode guards, and timestamps
+  without storing transcript paths or record content.
+depends_on:
+  - numeric-transcript-tail-privacy
+  - local-aggregate-privacy
+  - numeric-transcript-extractors
+created_by: metrics-phase-5-offset-tail-store

@@ -27,9 +27,11 @@
 | 3. Shared numeric extractors | `metrics-phase-3-numeric-extractors` | complete | `88deb65` | Parse Codex/Claude numeric fields without raw content. |
 <!-- harn:end numeric-transcript-extractors -->
 <!-- harn:assume historical-backfill-numeric-metrics ref=progress-phase-4 -->
-| 4. Backfill metrics | `metrics-phase-4-backfill-metrics` | complete | phase commit | Populate metrics from historical transcripts. |
+| 4. Backfill metrics | `metrics-phase-4-backfill-metrics` | complete | `3a541a0` | Populate metrics from historical transcripts. |
 <!-- harn:end historical-backfill-numeric-metrics -->
-| 5. Offset tail store | pending | pending | pending | Persist per-session byte offsets. |
+<!-- harn:assume transcript-offset-tail-store ref=progress-phase-5 -->
+| 5. Offset tail store | `metrics-phase-5-offset-tail-store` | complete | phase commit | Persist per-session byte offsets. |
+<!-- harn:end transcript-offset-tail-store -->
 | 6. Live hook tail integration | pending | pending | pending | Tail active transcripts from low-frequency hooks. |
 | 7. Local backend API | pending | pending | pending | Return aggregate metrics JSON for future frontend. |
 | 8. CLI metrics report | pending | pending | pending | Add concise backend validation report. |

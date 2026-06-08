@@ -1,0 +1,50 @@
+id: metrics-phase-5-offset-tail-store
+title: Add transcript offset tail store
+assumptions:
+  retire: []
+  create:
+    - id: transcript-offset-tail-store
+      title: Transcript offset tail store
+      statement: Live transcript tailing stores local operational cursors under
+        `~/.didmyaigetdumber/offsets/` keyed by provider plus a safe session
+        key, reads only complete newly appended JSONL lines, resets safely on
+        truncation or replacement, and persists byte offsets, size/inode guards,
+        and timestamps without storing transcript paths or record content.
+      reason: Live hooks need fast incremental transcript reads without rereading
+        whole session files or weakening privacy.
+      depends_on:
+        - numeric-transcript-tail-privacy
+        - local-aggregate-privacy
+        - numeric-transcript-extractors
+  reviewed:
+    - id: numeric-transcript-tail-privacy
+      outcome: unchanged
+      reason: Offset state stores cursors only and transcript reads are limited to
+        numeric extraction in later phases.
+    - id: local-aggregate-privacy
+      outcome: unchanged
+      reason: Offset files do not contain raw text, command text, file paths, source
+        excerpts, token content, or API secrets.
+    - id: numeric-transcript-extractors
+      outcome: unchanged
+      reason: The tail store only returns parsed records; extraction semantics remain
+        unchanged.
+anchors:
+  transcript-offset-tail-store:
+    offset-store:
+      action: change
+      reason: Implement cursor keys, locking, incremental complete-line reads,
+        truncation handling, and atomic offset writes.
+    offset-tests:
+      action: change
+      reason: Verify first read, incremental read, malformed trailing lines,
+        truncation reset, and path-free cursor files.
+    progress-phase-5:
+      action: change
+      reason: Track Phase 5 implementation status.
+files:
+  - src/offset-store.js
+  - test/offset-store.test.js
+  - metrics-hooks-backend-progress.md
+applied:
+  applied_at: 2026-06-08T15:11:45.466Z
