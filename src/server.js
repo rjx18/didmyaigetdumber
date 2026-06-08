@@ -497,6 +497,11 @@ function createServer(options = {}) {
       return;
     }
 
+    if (url.pathname === '/favicon.ico') {
+      send(res, 204, { 'cache-control': 'no-store' }, '');
+      return;
+    }
+
     if (url.pathname === '/') {
       send(res, 200, {
         'content-type': 'text/html; charset=utf-8',

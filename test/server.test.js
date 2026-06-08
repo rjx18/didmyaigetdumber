@@ -82,12 +82,14 @@ test('serves dashboard HTML and API over HTTP', async () => {
     const apiPayload = await apiResponse.json();
     const pageResponse = await fetch(`http://127.0.0.1:${port}/`);
     const page = await pageResponse.text();
+    const faviconResponse = await fetch(`http://127.0.0.1:${port}/favicon.ico`);
 
     assert.equal(apiResponse.status, 200);
     assert.equal(apiPayload.days.length, 1);
     assert.equal(apiPayload.days[0].total_pct, 50);
     assert.equal(pageResponse.status, 200);
     assert.match(page, /didmyaigetdumber/);
+    assert.equal(faviconResponse.status, 204);
   } finally {
     await close(server);
   }

@@ -1,0 +1,27 @@
+id: post-verification-favicon-route
+title: Avoid dashboard favicon 404
+assumptions:
+  retire: []
+  create: []
+  reviewed:
+    - id: local-dashboard-server
+      outcome: unchanged
+      reason: The favicon route avoids a browser 404 while preserving dashboard API
+        and aggregate-only behavior.
+    - id: end-to-end-verification
+      outcome: unchanged
+      reason: The existing verification remains valid and adds one browser routing
+        assertion.
+anchors:
+  local-dashboard-server:
+    server-http:
+      action: change
+      reason: Return an empty favicon response so browsers do not log a 404.
+    server-tests:
+      action: change
+      reason: Verify the favicon route during server tests.
+files:
+  - src/server.js
+  - test/server.test.js
+applied:
+  applied_at: 2026-06-08T05:56:35.525Z
