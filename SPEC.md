@@ -43,7 +43,7 @@ The Codex adapter should install user-level hooks under `~/.codex/hooks.json` by
 
 Minimum Codex hook coverage:
 
-- `UserPromptSubmit`: classify user prompt frustration, correction, and lexical interrupt patterns.
+- `UserPromptSubmit`: classify user prompt patterns.
 - `PostToolUse`: count tool calls and optionally failed/retried tool behavior when the hook input exposes it.
 - `PermissionRequest`: count permission prompts.
 - `Stop`: finalize turn-level counters and classify visible assistant output if available from the hook payload or transcript reference.
@@ -55,7 +55,7 @@ Claude Code supports lifecycle hooks in settings files such as `~/.claude/settin
 
 Minimum Claude hook coverage:
 
-- `UserPromptSubmit`: classify user prompt frustration, correction, and lexical interrupt patterns.
+- `UserPromptSubmit`: classify user prompt patterns.
 - `MessageDisplay`: classify visible assistant concession, reasoning-loop, and stop-like phrases as text is displayed.
 - `PostToolUse` and `PostToolUseFailure`: count tool success/failure.
 - `PermissionRequest` and `PermissionDenied`: count approval or auto-mode friction.
@@ -118,16 +118,11 @@ The `text` field is transient. It must not be written to disk unless the user en
 
 ### User Prompt Signals
 
-- `frustration`: profanity, anger, "why are you", "this is broken", "still failing".
-- `user_correction`: "not what I asked", "you didn't", "wrong", "again", "read the instructions".
-- `lexical_interrupt`: "stop", "wait", "no, don't", "undo that", "pause", "cancel".
+- `user_patterns`: combined user-scope friction patterns, including frustration, correction, and lexical-interrupt phrases such as "doesn't work", "wrong", "I don't want", "no, don't", "undo", "pause", and "cancel".
 
 ### Assistant Message Signals
 
-- `model_concession`: "you're right", "you are right", "good catch", "I missed", equivalent localized phrases.
-- `stop_like`: "I can't continue", "I'll stop here", "that's enough for now", premature completion phrasing.
-- `reasoning_loop_visible`: "let me think", "I need to reconsider", "I keep", "I'm going in circles".
-- `self_admitted_failure`: "I failed", "I broke", "I made a mistake", stronger failure wording.
+- `assistant_patterns`: combined assistant-scope quality patterns, including visible concessions, stop-like phrasing, reasoning loops, and self-admitted failures such as "good catch", "I missed", "I can't continue", "I need to reconsider", and "I was wrong".
 
 ### Runtime Signals
 
@@ -142,14 +137,12 @@ Important: lexical interrupts and runtime interrupts are separate. A user saying
 
 ## Pattern Files
 
+<!-- harn:assume two-scope-pattern-files ref=spec-pattern-files -->
 Pattern files live under locale folders:
 
 ```text
-patterns/en/frustration.md
-patterns/en/user-correction.md
-patterns/en/user-interrupt.md
-patterns/en/model-concession.md
-patterns/en/assistant-quality.md
+patterns/en/user-patterns.md
+patterns/en/assistant-patterns.md
 ```
 
 Each `.md` file is intentionally plain:
@@ -167,10 +160,11 @@ Rules:
 - Compile each non-empty line as a case-insensitive regex.
 - Prefer safe regexes compatible with RE2-style engines.
 - Backreferences and arbitrary lookaround should be avoided.
-- User-scope files: `frustration.md`, `user-correction.md`, `user-interrupt.md`.
-- Assistant-scope files: `model-concession.md`, `assistant-quality.md`.
+- User-scope file: `user-patterns.md`.
+- Assistant-scope file: `assistant-patterns.md`.
 - Count a category at most once per hook event, even if multiple lines match.
 - Local debug reports may count total line hits, but public counters should use the one-event, one-increment rule.
+<!-- harn:end two-scope-pattern-files -->
 
 The starter patterns were expanded from local Codex transcript mining across `~/.codex/sessions`:
 
@@ -211,15 +205,11 @@ Example:
     "permission_requests": 12,
     "permission_denied": 2,
     "runtime_interrupts": 1,
-    "lexical_interrupts": 5,
     "bad_user_prompts": 9
   },
   "matches": {
-    "frustration": { "events": 8, "line_hits": 13 },
-    "user_correction": { "events": 6, "line_hits": 10 },
-    "user_interrupt": { "events": 5, "line_hits": 5 },
-    "model_concession": { "events": 4, "line_hits": 4 },
-    "assistant_quality": { "events": 3, "line_hits": 5 }
+    "user_patterns": { "events": 9, "line_hits": 28 },
+    "assistant_patterns": { "events": 5, "line_hits": 9 }
   },
   "by_agent": {
     "codex": {
@@ -243,9 +233,8 @@ Example:
     }
   },
   "pattern_files": [
-    "patterns/en/frustration.md",
-    "patterns/en/model-concession.md",
-    "patterns/en/user-interrupt.md"
+    "patterns/en/user-patterns.md",
+    "patterns/en/assistant-patterns.md"
   ]
 }
 ```
@@ -260,6 +249,7 @@ The daily log must be updated atomically:
 
 ## Privacy
 
+<!-- harn:assume local-aggregate-privacy ref=spec-privacy-storage -->
 Never write:
 
 - raw user prompt text
@@ -271,6 +261,7 @@ Never write:
 - API keys or secrets
 
 Optional debug mode may write raw event JSON to `~/.didmyaigetdumber/debug/`, but it must be off by default and excluded from upload.
+<!-- harn:end local-aggregate-privacy -->
 
 ## Counting
 
@@ -279,16 +270,15 @@ For each hook event:
 - Apply the relevant locale/category regex files.
 - Increment category `events` by `1` if at least one line in that category matches.
 - Increment category `line_hits` locally by the number of matching regex lines.
-- Increment `bad_user_prompts` by at most `1` for a `UserPromptSubmit` event, even if it matches frustration, correction, and interrupt patterns.
+- Increment `bad_user_prompts` by at most `1` for a `UserPromptSubmit` event, even if it matches multiple user pattern lines.
 - Increment assistant categories separately for visible assistant-message hooks.
 
 There are no weights. This keeps local and public accounting simple and makes the server-side `+1` rule enforceable.
 
 Derived rates:
 
-- `frustration_rate = frustration.user_prompt_count / user_prompts`
-- `correction_rate = user_correction.events / user_prompts`
-- `concession_rate = model_concession.events / assistant_messages`
+- `user_pattern_rate = user_patterns.events / user_prompts`
+- `assistant_pattern_rate = assistant_patterns.events / assistant_messages`
 - `interrupts_per_1k_tool_calls = runtime_interrupts * 1000 / tool_calls`
 - `bad_prompt_rate = bad_user_prompts / user_prompts`
 
@@ -345,7 +335,7 @@ Uploaded event payloads include only:
 - model string
 - matched boolean for the event scope
 - matched category, if any
-- matched pattern references such as `en/user-correction.md:4`, if any
+- matched pattern references such as `en/user-patterns.md:4`, if any
 
 Uploaded payloads exclude:
 
@@ -374,8 +364,8 @@ Required request shape:
   "local_date": "2026-06-08",
   "scope": "user_prompt",
   "bad_prompt": true,
-  "category": "user_correction",
-  "pattern_refs": ["en/user-correction.md:4"]
+  "category": "user_patterns",
+  "pattern_refs": ["en/user-patterns.md:4"]
 }
 ```
 

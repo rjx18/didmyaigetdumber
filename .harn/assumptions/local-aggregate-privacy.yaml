@@ -1,0 +1,9 @@
+id: local-aggregate-privacy
+hash: a-4208dd38927b
+title: Local aggregate privacy
+state: active
+statement: Daily telemetry logs store aggregate counters only and must not store
+  raw prompts, assistant messages, paths, command text, secrets, or source
+  excerpts.
+depends_on: []
+created_by: phase-0-baseline

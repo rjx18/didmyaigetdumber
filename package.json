@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "vader-sentiment": "^1.1.3"
+  }
+}

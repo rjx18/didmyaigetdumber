@@ -1,0 +1,9 @@
+id: two-scope-pattern-files
+hash: a-ec7d056a324a
+title: Two scope-specific pattern files
+state: active
+statement: Pattern matching uses one user-scope pattern file and one
+  assistant-scope pattern file for each locale, so reporting can calculate user
+  and assistant rates from stable aggregate categories.
+depends_on: []
+created_by: phase-0-baseline

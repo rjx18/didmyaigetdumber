@@ -1,0 +1,55 @@
+id: phase-0-baseline
+title: Baseline two-pattern planning state
+assumptions:
+  retire: []
+  create:
+    - id: two-scope-pattern-files
+      title: Two scope-specific pattern files
+      statement: Pattern matching uses one user-scope pattern file and one
+        assistant-scope pattern file for each locale, so reporting can calculate
+        user and assistant rates from stable aggregate categories.
+      reason: The current spec and pattern layout intentionally collapsed separate
+        frustration, correction, interrupt, concession, and quality files into
+        two scope-level pattern files.
+      depends_on: []
+    - id: local-aggregate-privacy
+      title: Local aggregate privacy
+      statement: Daily telemetry logs store aggregate counters only and must not store
+        raw prompts, assistant messages, paths, command text, secrets, or source
+        excerpts.
+      reason: The project is local-first and privacy-preserving by design, and future
+        hook/backfill work depends on this storage boundary.
+      depends_on: []
+  reviewed: []
+anchors:
+  two-scope-pattern-files:
+    spec-pattern-files:
+      action: change
+      reason: Document the two-file pattern layout and category names.
+    progress-pattern-files:
+      action: change
+      reason: Track the baseline decision for future implementation phases.
+  local-aggregate-privacy:
+    spec-privacy-storage:
+      action: change
+      reason: Document the aggregate-only storage boundary.
+    progress-privacy-storage:
+      action: change
+      reason: Track the privacy boundary as an implementation assumption.
+files:
+  - AGENTS.md
+  - SPEC.md
+  - .gitignore
+  - package.json
+  - package-lock.json
+  - patterns/en/user-patterns.md
+  - patterns/en/assistant-patterns.md
+  - patterns/en/frustration.md
+  - patterns/en/user-correction.md
+  - patterns/en/user-interrupt.md
+  - patterns/en/model-concession.md
+  - patterns/en/assistant-quality.md
+  - tmp/plan/simple-hook-telemetry.md
+  - simple-hook-telemetry-progress.md
+applied:
+  applied_at: 2026-06-08T04:47:26.341Z
