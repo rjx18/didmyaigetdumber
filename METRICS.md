@@ -20,6 +20,8 @@ Every metric here must obey the project's hard invariants:
 ## Feasibility tags
 
 - `[live]` — derivable from a single hook event in the hot path.
+- `[live-tail]` — derived by a hook-triggered incremental read of the active
+  session transcript.
 - `[backfill]` — needs transcript reading (per-message token/timing detail).
 - `[token-data]` — depends on `usage` fields that may only appear on some
   events / agent versions.
@@ -57,10 +59,11 @@ and watch the trend, not the snapshot.
 
 - **Output tokens/sec** `[backfill] [token-data]` — **P2.** `output_tokens ÷
   generation time`. Watch for throttling trends.
-- **Wall-clock per turn** `[live]` — **P2.** UserPromptSubmit → Stop duration.
-- **Time-to-first-tool** `[live]` — **P3.** Prompt → first PreToolUse.
-- **Tool latency by tool** `[live]` — **P3.** PreToolUse → PostToolUse duration,
-  bucketed by tool name.
+- **Wall-clock per turn** `[live-tail]` — **P2.** UserPromptSubmit → Stop
+  duration.
+- **Time-to-first-tool** `[live-tail]` — **P3.** Prompt → first tool event.
+- **Tool latency by tool** `[live-tail]` — **P3.** Tool start → tool end
+  duration, bucketed by tool name.
 
 *Dropped:* "active vs idle split" — idle time is dominated by the user stepping
 away, so it measures the human, not the agent.
@@ -84,14 +87,16 @@ away, so it measures the human, not the agent.
 
 ## 4. Tool-use patterns
 
-- **Avg tool calls per message** `[live]` — **P1.** PreToolUse count between
+- **Avg tool calls per message** `[live-tail]` — **P1.** Tool-call count between
   prompts.
-- **Explore/Read calls per message** `[live]` — **P1.** Read/Grep/Glob/Explore
-  vs. total. How much it looks before it leaps.
-- **Tool-call mix** `[live]` — **P2.** % read / edit / execute / search / web.
-- **Read-before-edit ratio** `[live]` — **P2.** Edits preceded by a Read of that
-  file. Good-practice signal.
-- **Parallel-tool ratio** `[live]` — **P3.** Calls issued in batches vs.
+- **Explore/Read calls per message** `[live-tail]` — **P1.** Read/Grep/Glob/
+  Explore vs. total. How much it looks before it leaps.
+- **Tool-call mix** `[live-tail]` — **P2.** % read / edit / execute / search /
+  web.
+- **Read-before-edit ratio** `[live-tail]` — **P2.** Edits preceded by a read-ish
+  tool event in the same turn. This is a good-practice proxy, not path-level
+  proof, because paths are not stored.
+- **Parallel-tool ratio** `[live-tail]` — **P3.** Calls issued in batches vs.
   one-at-a-time.
 
 ### Per-tool output share (the verbosity-finder)
@@ -127,10 +132,11 @@ estimated on Claude.
 
 ## 5. Reliability & rework
 
-- **Tool error rate by tool** `[live]` — **P2.** PostToolUse failures ÷ total,
-  per tool (Bash failures, failed edits).
-- **Edit churn / rework rate** `[live]` — **P2.** Same file edited multiple
-  times in one turn (thrash signal).
+- **Tool error rate by tool** `[live-tail]` — **P2.** Tool failures ÷ total, per
+  tool (Bash failures, failed edits).
+- **Edit churn / rework rate** `[live-tail]` — **P2.** Repeated edit-ish events
+  in one turn. Path-level same-file churn is excluded unless a privacy-safe local
+  path hash is explicitly approved later.
 - **Permission-denied rate** `[live]` — **P3.** How often calls get blocked.
 - **Compaction frequency** `[uncertain]` — **P3.** How often the context window
   fills and summarizes (depends on whether a hook fires).
@@ -139,7 +145,7 @@ estimated on Claude.
 
 ## 6. Session shape
 
-- **Turns per session** `[live]` — **P2.**
+- **Turns per session** `[live-tail]` — **P2.**
 - **Tokens / cost per completed task** `[backfill] [token-data]` — **P2.**
   Efficiency, where "task" is bounded by session or git commit.
 - **Model mix** `[live]` — **P3.** % Opus / Sonnet / Haiku, if the event carries
@@ -175,9 +181,9 @@ content. `test/privacy.test.js` still governs what may hit disk.
 
 ### Mechanism: hook-triggered incremental tail
 
-1. Claude hooks receive `transcript_path`, `session_id`, `cwd`. Codex's active
-   rollout file is the newest `~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl`
-   (match on `cwd` to disambiguate concurrent sessions).
+1. Claude and Codex hooks receive `transcript_path` and session context. Use
+   `transcript_path` first. Codex newest-rollout discovery plus `cwd` matching is
+   fallback only.
 2. Persist a per-session **byte offset** (e.g. in `~/.didmyaigetdumber/offsets/`).
 3. On each triggering event, read only `file[offset..EOF]`, parse the new JSONL
    lines, accumulate numeric deltas, then save the new offset.
@@ -195,7 +201,8 @@ content. `test/privacy.test.js` still governs what may hit disk.
   `server_tool_use.{web_search_requests,web_fetch_requests}`, `service_tier`.
 - `message.model` (e.g. `claude-opus-4-8`); content blocks typed
   `text` / `thinking` / `tool_use{name,input}`.
-- Every record has ISO `timestamp`.
+- Metric-bearing `user`, `assistant`, `system`, and `progress` records have ISO
+  `timestamp`; some metadata records do not.
 - Following `user` record → `tool_result{tool_use_id, content, is_error}`.
 - **No rate-limit window state on disk.** `~/.claude.json` holds only plan-tier
   flags (`organizationRateLimitTier`), not live usage.
@@ -262,12 +269,14 @@ Proposed daily-log extension (`schema_version` → 2; all additive unless noted)
     "ttft_sum": 0, "ttft_count": 0,
     "tool_latency_sum": 0, "tool_latency_count": 0
   },
-  "windows": []               // NON-additive snapshots — see below
+  "windows": []               // append-only samples — see below
 }
 ```
 
 Merge rules: scalar sums add; the two maps merge by summing per key; `windows`
-appends then dedupes by `resets_at` keeping the max `used_percent`.
+appends observed samples and does not dedupe by `resets_at`. Reports can choose
+the highest-used sample for an allowance trend or all samples for a burn-rate
+curve.
 
 Per-metric **record → report formula**:
 
@@ -275,7 +284,7 @@ Per-metric **record → report formula**:
 |---|---|---|
 | Tokens/turn/session | `tokens.*` sums | direct, or ÷ `totals.sessions` |
 | Cache hit ratio | `input`, `cache_read`, `cache_creation` | `cache_read ÷ (cache_read + input + cache_creation)` |
-| Thinking share (Claude) | `thinking_chars`, `text_chars`, `output` | `thinking_chars ÷ (thinking_chars + text_chars)` × `output` |
+| Thinking share (Claude) | `thinking_chars`, `text_chars`, `output` | share: `thinking_chars ÷ (thinking_chars + text_chars)`; estimated tokens: share × `output` |
 | Thinking share (Codex) | `reasoning_output`, `output` | `reasoning_output ÷ output` |
 | Per-tool output share | `tool_output_chars{tool}` | `tool_output_chars[t] ÷ Σ tool_output_chars` |
 | Avg tool calls / msg | `tool_calls_by_name`, `assistant_messages` | `Σ tool_calls_by_name ÷ assistant_messages` |
@@ -290,12 +299,11 @@ point-in-time snapshot of a *rolling* 5h window, so it is **not** additive and
 does not belong in a daily sum. Record each observed snapshot as:
 
 ```jsonc
-{ "kind": "5h", "resets_at": 1780901738, "used_percent": 73, "sampled_at": "..." }
+{ "kind": "5h", "resets_at": 1780901738, "used_percent": 73, "sampled_at": "...", "tokens_in_window": 42000 }
 ```
 
-For **implied-allowance / shrinkage** detection, the report layer reconstructs
-each 5h window from the per-turn token series (timestamps + `last_token_usage`)
-and pairs it with the matching snapshot:
+For **implied-allowance / shrinkage** detection, the extractor records the
+observed `tokens_in_window` with each sample:
 
 ```
 tokens_in_window ÷ (used_percent ÷ 100)  ≈  current allowance

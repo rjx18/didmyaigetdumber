@@ -271,6 +271,10 @@ Never write:
 Optional debug mode may write raw event JSON to `~/.didmyaigetdumber/debug/`, but it must be off by default and excluded from upload.
 <!-- harn:end local-aggregate-privacy -->
 
+<!-- harn:assume numeric-transcript-tail-privacy ref=spec-numeric-tail-privacy -->
+Metric collection may read newly appended bytes from an active Codex or Claude transcript when the hook payload identifies that transcript. This live transcript tailing is limited to deriving numeric counters, safe timestamps, model names, tool names, rate-limit percentages, and local byte offsets. It must not persist raw message text, file paths, command text, source excerpts, tool payload content, or token content in daily logs, API responses, uploads, or reports.
+<!-- harn:end numeric-transcript-tail-privacy -->
+
 ## Counting
 
 For each hook event:

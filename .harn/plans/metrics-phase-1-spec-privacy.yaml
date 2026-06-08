@@ -1,0 +1,50 @@
+id: metrics-phase-1-spec-privacy
+title: Define numeric transcript tail privacy contract
+assumptions:
+  retire: []
+  create:
+    - id: numeric-transcript-tail-privacy
+      title: Numeric transcript tail privacy
+      statement: Live metric extraction may incrementally read the active Codex or
+        Claude transcript only to derive numeric counters, safe timestamps,
+        model names, tool names, and local byte offsets, while daily logs and
+        API responses must not persist raw message text, file paths, command
+        text, source excerpts, or token content.
+      reason: The metrics backend needs active-session numeric extraction without
+        weakening aggregate-only local storage or public API privacy.
+      depends_on:
+        - local-aggregate-privacy
+  reviewed:
+    - id: local-aggregate-privacy
+      outcome: unchanged
+      reason: The storage/API privacy boundary remains unchanged; the new
+        transcript-tail allowance is limited to deriving numeric aggregates and
+        offsets.
+    - id: daily-aggregate-log-schema
+      outcome: unchanged
+      reason: Phase 1 changes only documentation and progress tracking; schema v2 is
+        planned but not implemented here.
+    - id: aggregate-only-safety-checks
+      outcome: unchanged
+      reason: Existing privacy tests remain the enforcement point for daily logs and
+        API responses.
+anchors:
+  local-aggregate-privacy:
+    spec-privacy-storage:
+      action: change
+      reason: Document that active transcript reads are allowed only for numeric
+        metric extraction and must not change aggregate-only storage.
+  numeric-transcript-tail-privacy:
+    spec-numeric-tail-privacy:
+      action: change
+      reason: Anchor the active transcript numeric-tail contract in the spec.
+    progress-numeric-tail-privacy:
+      action: change
+      reason: Track the new metrics implementation contract in the progress file.
+files:
+  - SPEC.md
+  - METRICS.md
+  - tmp/plan/metrics-hooks-backend.md
+  - metrics-hooks-backend-progress.md
+applied:
+  applied_at: 2026-06-08T14:38:42.213Z

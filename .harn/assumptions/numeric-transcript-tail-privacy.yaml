@@ -1,0 +1,12 @@
+id: numeric-transcript-tail-privacy
+hash: a-d48d08d672b0
+title: Numeric transcript tail privacy
+state: active
+statement: Live metric extraction may incrementally read the active Codex or
+  Claude transcript only to derive numeric counters, safe timestamps, model
+  names, tool names, and local byte offsets, while daily logs and API responses
+  must not persist raw message text, file paths, command text, source excerpts,
+  or token content.
+depends_on:
+  - local-aggregate-privacy
+created_by: metrics-phase-1-spec-privacy
