@@ -1,0 +1,10 @@
+id: daily-log-locking
+hash: a-27220919b7d3
+title: Daily log locking
+state: active
+statement: Daily log updates acquire a date-scoped lock directory and keep the
+  locked section to read-apply-write, so concurrent hooks do not corrupt
+  aggregate JSON files.
+depends_on:
+  - daily-aggregate-log-schema
+created_by: phase-4-locking

@@ -1,0 +1,49 @@
+id: phase-4-locking
+title: Add daily log locking and atomic writes
+assumptions:
+  retire: []
+  create:
+    - id: daily-log-locking
+      title: Daily log locking
+      statement: Daily log updates acquire a date-scoped lock directory and keep the
+        locked section to read-apply-write, so concurrent hooks do not corrupt
+        aggregate JSON files.
+      reason: Hook invocations may overlap, and local daily counters must remain valid
+        without a database.
+      depends_on:
+        - daily-aggregate-log-schema
+  reviewed:
+    - id: daily-aggregate-log-schema
+      outcome: unchanged
+      reason: Phase 4 preserves the schema while changing write mechanics.
+    - id: local-aggregate-privacy
+      outcome: unchanged
+      reason: Phase 4 still writes aggregate counters only.
+anchors:
+  daily-log-locking:
+    lock-and-atomic-write:
+      action: change
+      reason: Add busy-wait lock acquisition and atomic file replacement.
+    lock-tests:
+      action: change
+      reason: Verify lock release, stale lock recovery, and locked updates.
+    progress-phase-4:
+      action: change
+      reason: Track Phase 4 completion.
+  daily-aggregate-log-schema:
+    store-schema:
+      action: change
+      reason: Existing storage helpers will route writes through the atomic path.
+    progress-phase-3:
+      action: keep
+      reason: Phase 3 progress remains unchanged.
+  local-aggregate-privacy:
+    progress-privacy-storage:
+      action: keep
+      reason: Privacy assumption remains unchanged.
+files:
+  - src/log-store.js
+  - test/log-store.test.js
+  - simple-hook-telemetry-progress.md
+applied:
+  applied_at: 2026-06-08T04:55:11.343Z

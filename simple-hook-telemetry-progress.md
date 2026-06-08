@@ -29,9 +29,11 @@
 | 2. Pattern loader | `phase-2-pattern-loader` | complete | `7509c94` | Compile scope pattern files and return line hits. |
 <!-- harn:end scope-pattern-loader -->
 <!-- harn:assume daily-aggregate-log-schema ref=progress-phase-3 -->
-| 3. Minimal local storage | `phase-3-log-store` | complete | phase commit | Daily schema and default counters. |
+| 3. Minimal local storage | `phase-3-log-store` | complete | `ea400d1` | Daily schema and default counters. |
 <!-- harn:end daily-aggregate-log-schema -->
-| 4. Locking and atomic writes | pending | pending | pending | Busy-wait lock and atomic JSON writes. |
+<!-- harn:assume daily-log-locking ref=progress-phase-4 -->
+| 4. Locking and atomic writes | `phase-4-locking` | complete | phase commit | Busy-wait lock and atomic JSON writes. |
+<!-- harn:end daily-log-locking -->
 | 5. Normalized event model | pending | pending | pending | In-memory event and increment objects. |
 | 6. Codex live hook adapter | pending | pending | pending | Codex hook normalization and init. |
 | 7. Claude Code live hook adapter | pending | pending | pending | Claude hook normalization and init. |

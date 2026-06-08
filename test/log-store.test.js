@@ -7,12 +7,16 @@ const path = require('node:path');
 const test = require('node:test');
 
 const {
+  acquireDailyLock,
   applyIncrement,
   createDailyLog,
+  dailyLockPath,
   dailyLogPath,
   emptyIncrement,
   ensureDailyLog,
   readDailyLog,
+  releaseDailyLock,
+  updateDailyLog,
 } = require('../src/log-store');
 
 function tempBase() {
@@ -55,3 +59,52 @@ test('ensures and reads a daily log file', () => {
   assert.equal(readDailyLog(date, options).date, date);
 });
 // harn:end daily-aggregate-log-schema
+
+// harn:assume daily-log-locking ref=lock-tests
+test('acquires and releases date-scoped lock directories', () => {
+  const baseDir = tempBase();
+  const options = { baseDir };
+  const date = '2026-06-08';
+
+  const lockPath = acquireDailyLock(date, options);
+
+  assert.equal(lockPath, dailyLockPath(date, options));
+  assert.equal(fs.existsSync(lockPath), true);
+
+  releaseDailyLock(lockPath);
+
+  assert.equal(fs.existsSync(lockPath), false);
+});
+
+test('recovers stale lock directories', () => {
+  const baseDir = tempBase();
+  const options = { baseDir, staleMs: 1, waitMs: 1 };
+  const date = '2026-06-08';
+  const staleLock = dailyLockPath(date, options);
+  fs.mkdirSync(staleLock, { recursive: true });
+  const old = new Date(Date.now() - 1000);
+  fs.utimesSync(staleLock, old, old);
+
+  const lockPath = acquireDailyLock(date, options);
+
+  assert.equal(lockPath, staleLock);
+  releaseDailyLock(lockPath);
+});
+
+test('updates daily logs inside the lock using aggregate increments', () => {
+  const baseDir = tempBase();
+  const options = { baseDir };
+  const date = '2026-06-08';
+  const increment = emptyIncrement();
+  increment.totals.user_messages = 1;
+  increment.matches.user_patterns.events = 1;
+
+  updateDailyLog(date, increment, options);
+  updateDailyLog(date, increment, options);
+
+  const log = readDailyLog(date, options);
+  assert.equal(log.totals.user_messages, 2);
+  assert.equal(log.matches.user_patterns.events, 2);
+  assert.equal(fs.existsSync(dailyLockPath(date, options)), false);
+});
+// harn:end daily-log-locking

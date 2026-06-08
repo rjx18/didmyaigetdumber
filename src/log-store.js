@@ -35,8 +35,16 @@ function logsDir(options = {}) {
   return path.join(baseDir(options), 'logs');
 }
 
+function locksDir(options = {}) {
+  return path.join(baseDir(options), 'locks');
+}
+
 function dailyLogPath(date, options = {}) {
   return path.join(logsDir(options), `${date}.json`);
+}
+
+function dailyLockPath(date, options = {}) {
+  return path.join(locksDir(options), `${date}.lock`);
 }
 
 function emptyTotals() {
@@ -116,11 +124,18 @@ function readDailyLog(date = localDate(), options = {}) {
   return normalizeDailyLog(JSON.parse(fs.readFileSync(filePath, 'utf8')), date);
 }
 
-function writeDailyLog(log, options = {}) {
+function writeDailyLogAtomic(log, options = {}) {
   const normalized = normalizeDailyLog(log, log.date);
   fs.mkdirSync(logsDir(options), { recursive: true });
-  fs.writeFileSync(dailyLogPath(normalized.date, options), `${JSON.stringify(normalized, null, 2)}\n`);
+  const targetPath = dailyLogPath(normalized.date, options);
+  const tempPath = `${targetPath}.${process.pid}.${Date.now()}.tmp`;
+  fs.writeFileSync(tempPath, `${JSON.stringify(normalized, null, 2)}\n`);
+  fs.renameSync(tempPath, targetPath);
   return normalized;
+}
+
+function writeDailyLog(log, options = {}) {
+  return writeDailyLogAtomic(log, options);
 }
 
 function ensureDailyLog(date = localDate(), options = {}) {
@@ -132,18 +147,84 @@ function ensureDailyLog(date = localDate(), options = {}) {
 }
 // harn:end daily-aggregate-log-schema
 
+function sleepMs(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+// harn:assume daily-log-locking ref=lock-and-atomic-write
+function acquireDailyLock(date, options = {}) {
+  const lockPath = dailyLockPath(date, options);
+  const waitMs = options.waitMs || 25;
+  const staleMs = options.staleMs || 30000;
+  fs.mkdirSync(locksDir(options), { recursive: true });
+
+  while (true) {
+    try {
+      fs.mkdirSync(lockPath);
+      return lockPath;
+    } catch (error) {
+      if (error && error.code !== 'EEXIST') {
+        throw error;
+      }
+
+      try {
+        const stat = fs.statSync(lockPath);
+        if (Date.now() - stat.mtimeMs > staleMs) {
+          fs.rmSync(lockPath, { recursive: true, force: true });
+          continue;
+        }
+      } catch (statError) {
+        if (!statError || statError.code !== 'ENOENT') {
+          throw statError;
+        }
+      }
+
+      sleepMs(waitMs);
+    }
+  }
+}
+
+function releaseDailyLock(lockPath) {
+  fs.rmSync(lockPath, { recursive: true, force: true });
+}
+
+function withDailyLogLock(date, fn, options = {}) {
+  const lockPath = acquireDailyLock(date, options);
+  try {
+    return fn();
+  } finally {
+    releaseDailyLock(lockPath);
+  }
+}
+
+function updateDailyLog(date = localDate(), increment = emptyIncrement(), options = {}) {
+  return withDailyLogLock(date, () => {
+    const current = readDailyLog(date, options);
+    const next = applyIncrement(current, increment);
+    return writeDailyLogAtomic(next, options);
+  }, options);
+}
+// harn:end daily-log-locking
+
 module.exports = {
   MATCH_KEYS,
   TOTAL_KEYS,
+  acquireDailyLock,
   applyIncrement,
   baseDir,
   createDailyLog,
+  dailyLockPath,
   dailyLogPath,
   emptyIncrement,
   ensureDailyLog,
   localDate,
+  locksDir,
   logsDir,
   normalizeDailyLog,
   readDailyLog,
+  releaseDailyLock,
+  updateDailyLog,
+  withDailyLogLock,
   writeDailyLog,
+  writeDailyLogAtomic,
 };
