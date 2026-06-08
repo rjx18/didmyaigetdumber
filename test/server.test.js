@@ -16,8 +16,10 @@ function tempBase() {
 function writeAggregate(date, options, values) {
   const log = createDailyLog(date);
   Object.assign(log.totals, values.totals || {});
-  Object.assign(log.matches.user_patterns, values.user_patterns || {});
-  Object.assign(log.matches.assistant_patterns, values.assistant_patterns || {});
+  Object.assign(log.matches.user_1pt, values.user_1pt || {});
+  Object.assign(log.matches.user_2pt, values.user_2pt || {});
+  Object.assign(log.matches.assistant_1pt, values.assistant_1pt || {});
+  Object.assign(log.matches.assistant_2pt, values.assistant_2pt || {});
   writeDailyLog(log, options);
 }
 
@@ -42,13 +44,15 @@ test('serves aggregate day data as JSON', async () => {
   const baseDir = tempBase();
   writeAggregate('2026-06-07', { baseDir }, {
     totals: { user_messages: 8, assistant_messages: 2 },
-    user_patterns: { events: 2, line_hits: 2 },
-    assistant_patterns: { events: 1, line_hits: 1 },
+    user_1pt: { events: 1, line_hits: 1 },
+    user_2pt: { events: 1, line_hits: 1 },
+    assistant_1pt: { events: 1, line_hits: 1 },
   });
   writeAggregate('2026-06-08', { baseDir }, {
     totals: { sessions: 2, user_messages: 4, assistant_messages: 6, tool_calls: 3, runtime_interrupts: 1 },
-    user_patterns: { events: 1, line_hits: 2 },
-    assistant_patterns: { events: 2, line_hits: 3 },
+    user_1pt: { events: 1, line_hits: 2 },
+    assistant_1pt: { events: 1, line_hits: 1 },
+    assistant_2pt: { events: 1, line_hits: 2 },
   });
 
   assert.equal(parsePort('0'), 0);
@@ -72,7 +76,7 @@ test('serves dashboard HTML and API over HTTP', async () => {
 
   writeAggregate('2026-06-08', { baseDir }, {
     totals: { user_messages: 1, assistant_messages: 1 },
-    user_patterns: { events: 1, line_hits: 1 },
+    user_1pt: { events: 1, line_hits: 1 },
   });
 
   const server = createServer({ baseDir });

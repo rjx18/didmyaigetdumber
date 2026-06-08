@@ -1,0 +1,11 @@
+id: tiered-scope-pattern-files
+hash: a-fdb968f34db2
+title: Tiered scope pattern files
+state: active
+statement: Pattern matching uses `user-1pt.md`, `user-2pt.md`,
+  `assistant-1pt.md`, and `assistant-2pt.md` files for each locale, with blank
+  lines and lines whose trimmed text starts with `#` ignored, so categories can
+  encode the two-tier friction score without YAML, IDs, or raw text.
+depends_on:
+  - local-aggregate-privacy
+created_by: tiered-pattern-files

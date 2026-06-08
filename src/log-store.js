@@ -16,8 +16,10 @@ const TOTAL_KEYS = [
 ];
 
 const MATCH_KEYS = [
-  'user_patterns',
-  'assistant_patterns',
+  'user_1pt',
+  'user_2pt',
+  'assistant_1pt',
+  'assistant_2pt',
 ];
 
 function localDate(date = new Date()) {

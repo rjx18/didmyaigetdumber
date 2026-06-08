@@ -9,10 +9,11 @@
 
 ## Assumptions
 
-<!-- harn:assume two-scope-pattern-files ref=progress-pattern-files -->
+<!-- harn:assume tiered-scope-pattern-files ref=progress-pattern-files -->
 - Harn was added after the initial spec/pattern planning edits, so Phase 0 records and commits that baseline before implementation starts.
 - V1 is a plain JavaScript Node CLI package with no build step, TypeScript, database, public upload, or VADER storage.
-<!-- harn:end two-scope-pattern-files -->
+- Pattern files are split into user/assistant 1pt and 2pt tier files; blank lines and `#` section headings are ignored.
+<!-- harn:end tiered-scope-pattern-files -->
 <!-- harn:assume local-aggregate-privacy ref=progress-privacy-storage -->
 - Live hooks process text only in memory; historical transcript parsing is limited to explicit backfill commands.
 <!-- harn:end local-aggregate-privacy -->
@@ -25,9 +26,9 @@
 <!-- harn:assume npm-cli-entrypoint ref=progress-phase-1 -->
 | 1. Package and CLI skeleton | `phase-1-cli-skeleton` | complete | `52f2a85` | Created executable CLI and command routing. |
 <!-- harn:end npm-cli-entrypoint -->
-<!-- harn:assume scope-pattern-loader ref=progress-phase-2 -->
-| 2. Pattern loader | `phase-2-pattern-loader` | complete | `7509c94` | Compile scope pattern files and return line hits. |
-<!-- harn:end scope-pattern-loader -->
+<!-- harn:assume tiered-pattern-loader ref=progress-phase-2 -->
+| 2. Pattern loader | `phase-2-pattern-loader` | complete | `7509c94` | Compile tiered scope pattern files and return line hits. |
+<!-- harn:end tiered-pattern-loader -->
 <!-- harn:assume daily-aggregate-log-schema ref=progress-phase-3 -->
 | 3. Minimal local storage | `phase-3-log-store` | complete | `ea400d1` | Daily schema and default counters. |
 <!-- harn:end daily-aggregate-log-schema -->
@@ -67,3 +68,4 @@
 <!-- harn:assume end-to-end-verification ref=progress-phase-15 -->
 | 15. Verification | `phase-15-verification` | complete | phase commit | End-to-end simulated hooks/backfill/report/server checks. |
 <!-- harn:end end-to-end-verification -->
+| Post-MVP. Tiered pattern files | `tiered-pattern-files` | complete | pending | Split pattern files and counters into 1pt/2pt categories. |

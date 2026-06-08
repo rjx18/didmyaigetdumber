@@ -95,7 +95,7 @@ function runCheck(label, fn, options) {
   }
 }
 
-// harn:assume scope-pattern-loader ref=doctor-pattern-check
+// harn:assume tiered-pattern-loader ref=doctor-pattern-check
 async function runDoctor(options = {}, io) {
   const results = [
     runCheck('patterns', checkPatterns, options),
@@ -122,7 +122,7 @@ async function runDoctor(options = {}, io) {
   io.stdout.write('doctor ok\n');
   return 0;
 }
-// harn:end scope-pattern-loader
+// harn:end tiered-pattern-loader
 // harn:end doctor-health-checks
 
 module.exports = {

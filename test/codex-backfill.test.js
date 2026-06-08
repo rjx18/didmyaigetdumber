@@ -107,8 +107,8 @@ test('backfills sanitized Codex JSONL records into aggregate daily logs', () => 
   assert.equal(log.totals.assistant_messages, 1);
   assert.equal(log.totals.tool_calls, 2);
   assert.equal(log.totals.runtime_interrupts, 1);
-  assert.equal(log.matches.user_patterns.events, 1);
-  assert.equal(log.matches.assistant_patterns.events, 1);
+  assert.equal(log.matches.user_1pt.events, 1);
+  assert.equal(log.matches.assistant_1pt.events, 1);
   assert.equal(serialized.includes("don't want"), false);
   assert.equal(serialized.includes('good catch'), false);
   assert.equal(serialized.includes('ignored command text'), false);

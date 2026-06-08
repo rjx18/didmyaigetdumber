@@ -113,8 +113,8 @@ test('backfills sanitized Claude JSONL records into aggregate daily logs', () =>
   assert.equal(log.totals.tool_calls, 1);
   assert.equal(log.totals.tool_failures, 1);
   assert.equal(log.totals.runtime_interrupts, 1);
-  assert.equal(log.matches.user_patterns.events, 1);
-  assert.equal(log.matches.assistant_patterns.events, 1);
+  assert.equal(log.matches.user_1pt.events, 1);
+  assert.equal(log.matches.assistant_1pt.events, 1);
   assert.equal(serialized.includes("don't want"), false);
   assert.equal(serialized.includes('good catch'), false);
   assert.equal(serialized.includes('ignored command text'), false);
@@ -200,7 +200,7 @@ test('backfill all merges Codex and Claude same-day aggregates before writing', 
   assert.match(stdout.text(), /all backfill: codex_files=1 claude_files=1 days=1 created=1 skipped=0 overwritten=0/);
   assert.equal(log.totals.sessions, 2);
   assert.equal(log.totals.user_messages, 2);
-  assert.equal(log.matches.user_patterns.events, 2);
+  assert.equal(log.matches.user_1pt.events, 2);
 });
 
 test('skips Claude sessions in the didmyaigetdumber project', () => {

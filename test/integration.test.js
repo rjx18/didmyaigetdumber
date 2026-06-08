@@ -115,13 +115,13 @@ test('simulated hook, backfill, report, and server workflow stays aggregate-only
   const liveLog = readDailyLog('2026-06-08', { baseDir });
   const historyLog = readDailyLog('2026-06-07', { baseDir });
   assert.equal(liveLog.totals.user_messages, 1);
-  assert.equal(liveLog.matches.user_patterns.events, 1);
+  assert.equal(liveLog.matches.user_1pt.events, 1);
   assert.equal(historyLog.totals.sessions, 2);
   assert.equal(historyLog.totals.user_messages, 1);
   assert.equal(historyLog.totals.assistant_messages, 1);
   assert.equal(historyLog.totals.tool_calls, 1);
-  assert.equal(historyLog.matches.user_patterns.events, 1);
-  assert.equal(historyLog.matches.assistant_patterns.events, 1);
+  assert.equal(historyLog.matches.user_1pt.events, 1);
+  assert.equal(historyLog.matches.assistant_1pt.events, 1);
 
   const report = capture();
   assert.equal(await runReport({ baseDir, days: '7' }, {

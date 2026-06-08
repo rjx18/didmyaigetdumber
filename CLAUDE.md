@@ -28,7 +28,7 @@ stdin JSON → adapter → normalized event → pattern match → increment → 
 - `src/hook.js` — orchestrates the pipeline above. Detects agent (`--agent`, `DIDMYAIGETDUMBER_AGENT`, or payload shape), normalizes, matches patterns only when there is a scope + text, increments, writes.
 - `src/adapters/{codex,claude}.js` — map provider-specific (and deeply varied) hook payloads into a normalized event `{ agent, event_type, scope, text, flags }`. Adapters defensively probe many field names because hook payload shapes differ across agent versions.
 - `src/events.js` — `incrementFromEvent` converts a normalized event into a counter delta. Counting rule: **at most one event increment per hook invocation per category** (even if multiple regex lines match); `line_hits` may exceed 1 for local debugging only.
-- `src/patterns.js` — loads `patterns/<locale>/<scope>-patterns.md`, compiling each non-empty line as one case-insensitive regex. Category = filename, locale = folder, pattern identity = `{locale}/{file}:{line}`.
+- `src/patterns.js` — loads tiered `patterns/<locale>/<scope>-<points>.md` files, compiling each non-empty, non-comment line as one case-insensitive regex. Category = filename, locale = folder, pattern identity = `{locale}/{file}:{line}`.
 - `src/log-store.js` — daily aggregate schema, directory-based busy-wait locking (`mkdir` lock with stale reclaim), and atomic temp-write + rename. The canonical home is `~/.didmyaigetdumber/` (`logs/`, `locks/`, `config.json`).
 - `src/backfill*.js`, `src/init/*.js`, `src/install.js`, `src/doctor.js`, `src/report.js`, `src/server.js` — historical transcript backfill, hook installation, interactive onboarding, health checks, reporting, and the local dashboard server.
 
@@ -47,7 +47,7 @@ These are enforced by `test/privacy.test.js` and the spec — violating them def
 
 ## Pattern files (`patterns/<locale>/*.md`)
 
-Plain text, intentionally minimal: one regex per non-empty line — no YAML, IDs, weights, or comments. Use `user-patterns.md` (user scope) and `assistant-patterns.md` (assistant scope). Prefer contextual phrases over single broad words (`no`, `stop`, `done`, `failed` are known-noisy). Keep regexes RE2-safe: avoid backreferences and arbitrary lookaround. **Before committing pattern changes, compile every line** to catch invalid regexes (`doctor` also validates them).
+Plain text, intentionally minimal: one regex per non-empty, non-comment line. Lines whose trimmed text starts with `#` and blank lines are ignored. Do not use YAML, IDs, or per-line weights. Use `user-1pt.md`, `user-2pt.md`, `assistant-1pt.md`, and `assistant-2pt.md`. Prefer contextual phrases over single broad words (`no`, `stop`, `done`, `failed` are known-noisy). Keep regexes RE2-safe: avoid backreferences and arbitrary lookaround. **Before committing pattern changes, compile every active regex line** to catch invalid regexes (`doctor` also validates them).
 
 ## Harn workflow
 

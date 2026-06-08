@@ -7,9 +7,10 @@ This repository defines a local-first hook telemetry tool for AI coding agents. 
 ## Pattern Files
 
 - Store locale-specific patterns in folders such as `patterns/en/`.
-- Each pattern file is plain text: one regex per non-empty line.
-- Do not use YAML, weights, comments, or IDs in pattern files.
-- The category is the filename, for example `user-patterns.md` or `assistant-patterns.md`.
+- Each pattern file is plain text: one regex per non-empty, non-comment line.
+- Blank lines and lines whose trimmed text starts with `#` are ignored.
+- Do not use YAML, IDs, or per-line weights in pattern files.
+- The category is the filename, for example `user-1pt.md` or `assistant-2pt.md`.
 - Keep patterns broad enough for trend measurement, but avoid obviously noisy single words unless explicitly requested.
 
 ## Privacy

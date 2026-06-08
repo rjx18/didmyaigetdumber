@@ -31,8 +31,10 @@ test('public day API exposes only aggregate allowlisted fields', () => {
       runtime_interrupts: 1,
     },
     matches: {
-      user_patterns: { events: 1, line_hits: 2 },
-      assistant_patterns: { events: 2, line_hits: 3 },
+      user_1pt: { events: 1, line_hits: 2 },
+      user_2pt: { events: 1, line_hits: 1 },
+      assistant_1pt: { events: 1, line_hits: 1 },
+      assistant_2pt: { events: 1, line_hits: 2 },
     },
   }, { baseDir });
 

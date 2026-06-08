@@ -41,12 +41,16 @@ function pad(value, width) {
   return String(value).padEnd(width, ' ');
 }
 
+function matchEvents(log, keys) {
+  return keys.reduce((total, key) => total + Number((log.matches[key] && log.matches[key].events) || 0), 0);
+}
+
 function statsForLog(log) {
   const userMessages = log.totals.user_messages;
   const assistantMessages = log.totals.assistant_messages;
   const totalMessages = userMessages + assistantMessages;
-  const userHits = log.matches.user_patterns.events;
-  const assistantHits = log.matches.assistant_patterns.events;
+  const userHits = matchEvents(log, ['user_1pt', 'user_2pt', 'user_patterns']);
+  const assistantHits = matchEvents(log, ['assistant_1pt', 'assistant_2pt', 'assistant_patterns']);
   const totalHits = userHits + assistantHits;
 
   return {

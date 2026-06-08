@@ -57,7 +57,7 @@ test('handles Claude assistant display hooks through aggregate storage', async (
 
   const log = readDailyLog('2026-06-08', { baseDir });
   assert.equal(log.totals.assistant_messages, 1);
-  assert.equal(log.matches.assistant_patterns.events, 1);
+  assert.equal(log.matches.assistant_1pt.events, 1);
 });
 
 test('merges Claude settings without duplicating didmyaigetdumber entries', () => {

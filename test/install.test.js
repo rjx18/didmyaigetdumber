@@ -122,8 +122,8 @@ test('installer can backfill Codex and Claude logs through the combined writer',
   assert.equal(log.totals.sessions, 2);
   assert.equal(log.totals.user_messages, 1);
   assert.equal(log.totals.assistant_messages, 1);
-  assert.equal(log.matches.user_patterns.events, 1);
-  assert.equal(log.matches.assistant_patterns.events, 1);
+  assert.equal(log.matches.user_1pt.events, 1);
+  assert.equal(log.matches.assistant_2pt.events, 1);
   assert.equal(readConfig({ baseDir }).telemetry_enabled, false);
 });
 

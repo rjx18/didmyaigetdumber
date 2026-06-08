@@ -1,7 +1,7 @@
 id: scope-pattern-loader
 hash: a-5b7e9fcedd9c
 title: Scope pattern loader
-state: active
+state: retired
 statement: Pattern loading maps `user` and `assistant` scopes to the package
   pattern files, compiles each non-empty line case-insensitively, and reports
   matching line counts without retaining matched text.
@@ -10,3 +10,4 @@ depends_on:
   - local-aggregate-privacy
   - npm-cli-entrypoint
 created_by: phase-2-pattern-loader
+retired_by: tiered-pattern-files

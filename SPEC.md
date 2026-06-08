@@ -79,7 +79,7 @@ agent hook event JSON
 
 - `didmyaigetdumber hook`: command invoked by Codex/Claude hooks. Reads event JSON on stdin.
 - `agent adapters`: normalize provider-specific hook payloads into a shared schema.
-- `pattern loader`: loads `patterns/<locale>/*.md` files and treats each non-empty line as one regex.
+- `pattern loader`: loads tiered `patterns/<locale>/*.md` files and treats each non-empty, non-comment line as one regex.
 - `pattern engine`: applies regexes to normalized text fields.
 - `daily accumulator`: updates daily aggregate JSON atomically.
 - `event uploader`: optional no-login hook-event submitter.
@@ -118,11 +118,13 @@ The `text` field is transient. It must not be written to disk unless the user en
 
 ### User Prompt Signals
 
-- `user_patterns`: combined user-scope friction patterns, including frustration, correction, and lexical-interrupt phrases such as "doesn't work", "wrong", "I don't want", "no, don't", "undo", "pause", and "cancel".
+- `user_1pt`: user-scope friction patterns that are useful but noisy, including failure reports, corrections, pushback, lexical interrupts, and steering phrases such as "doesn't work", "wrong", "I don't want", "no, don't", "undo", "pause", and "cancel".
+- `user_2pt`: higher-confidence user frustration patterns, mainly profanity and direct insults such as "wtf", "why tf", "bullshit", and "are you stupid".
 
 ### Assistant Message Signals
 
-- `assistant_patterns`: combined assistant-scope quality patterns, including visible concessions, stop-like phrasing, reasoning loops, and self-admitted failures such as "good catch", "I missed", "I can't continue", "I need to reconsider", and "I was wrong".
+- `assistant_1pt`: visible assistant concessions, uncertainty, stop-like phrasing, and recovery language such as "good catch", "I can't continue", "may not be complete", "I need to reconsider", and "let me step back".
+- `assistant_2pt`: explicit assistant self-failure admissions such as "I failed to", "I broke it", "I violated the instructions", "my mistake", and "I introduced a regression".
 
 ### Runtime Signals
 
@@ -137,34 +139,36 @@ Important: lexical interrupts and runtime interrupts are separate. A user saying
 
 ## Pattern Files
 
-<!-- harn:assume two-scope-pattern-files ref=spec-pattern-files -->
+<!-- harn:assume tiered-scope-pattern-files ref=spec-pattern-files -->
 Pattern files live under locale folders:
 
 ```text
-patterns/en/user-patterns.md
-patterns/en/assistant-patterns.md
+patterns/en/user-1pt.md
+patterns/en/user-2pt.md
+patterns/en/assistant-1pt.md
+patterns/en/assistant-2pt.md
 ```
 
 Each `.md` file is intentionally plain:
 
-- one regex per non-empty line
+- one regex per non-empty, non-comment line
+- blank lines and lines whose trimmed text starts with `#` are ignored
 - no YAML
 - no IDs
-- no weights
-- no comments
+- no per-line weights
 
 The category comes from the filename. The locale comes from the folder name. The pattern identity for local debugging and upload is `{locale}/{filename}:{line_number}`.
 
 Rules:
 
-- Compile each non-empty line as a case-insensitive regex.
+- Compile each non-empty, non-comment line as a case-insensitive regex.
 - Prefer safe regexes compatible with RE2-style engines.
 - Backreferences and arbitrary lookaround should be avoided.
-- User-scope file: `user-patterns.md`.
-- Assistant-scope file: `assistant-patterns.md`.
+- User-scope files: `user-1pt.md` and `user-2pt.md`.
+- Assistant-scope files: `assistant-1pt.md` and `assistant-2pt.md`.
 - Count a category at most once per hook event, even if multiple lines match.
 - Local debug reports may count total line hits, but public counters should use the one-event, one-increment rule.
-<!-- harn:end two-scope-pattern-files -->
+<!-- harn:end tiered-scope-pattern-files -->
 
 The starter patterns were expanded from local Codex transcript mining across `~/.codex/sessions`:
 
@@ -208,8 +212,10 @@ Example:
     "bad_user_prompts": 9
   },
   "matches": {
-    "user_patterns": { "events": 9, "line_hits": 28 },
-    "assistant_patterns": { "events": 5, "line_hits": 9 }
+    "user_1pt": { "events": 8, "line_hits": 24 },
+    "user_2pt": { "events": 1, "line_hits": 4 },
+    "assistant_1pt": { "events": 4, "line_hits": 6 },
+    "assistant_2pt": { "events": 1, "line_hits": 3 }
   },
   "by_agent": {
     "codex": {
@@ -233,8 +239,10 @@ Example:
     }
   },
   "pattern_files": [
-    "patterns/en/user-patterns.md",
-    "patterns/en/assistant-patterns.md"
+    "patterns/en/user-1pt.md",
+    "patterns/en/user-2pt.md",
+    "patterns/en/assistant-1pt.md",
+    "patterns/en/assistant-2pt.md"
   ]
 }
 ```
@@ -273,12 +281,13 @@ For each hook event:
 - Increment `bad_user_prompts` by at most `1` for a `UserPromptSubmit` event, even if it matches multiple user pattern lines.
 - Increment assistant categories separately for visible assistant-message hooks.
 
-There are no weights. This keeps local and public accounting simple and makes the server-side `+1` rule enforceable.
+There are no per-line weights. The local two-tier score is derived from category filenames, while public accounting stays server-side `+1` per accepted event.
 
 Derived rates:
 
-- `user_pattern_rate = user_patterns.events / user_prompts`
-- `assistant_pattern_rate = assistant_patterns.events / assistant_messages`
+- `user_pattern_rate = (user_1pt.events + user_2pt.events) / user_prompts`
+- `assistant_pattern_rate = (assistant_1pt.events + assistant_2pt.events) / assistant_messages`
+- `two_tier_score = 100 * (user_1pt.events + assistant_1pt.events + runtime_interrupts + 2 * (user_2pt.events + assistant_2pt.events)) / user_prompts`
 - `interrupts_per_1k_tool_calls = runtime_interrupts * 1000 / tool_calls`
 - `bad_prompt_rate = bad_user_prompts / user_prompts`
 
@@ -335,7 +344,7 @@ Uploaded event payloads include only:
 - model string
 - matched boolean for the event scope
 - matched category, if any
-- matched pattern references such as `en/user-patterns.md:4`, if any
+- matched pattern references such as `en/user-1pt.md:4`, if any
 
 Uploaded payloads exclude:
 
@@ -364,8 +373,8 @@ Required request shape:
   "local_date": "2026-06-08",
   "scope": "user_prompt",
   "bad_prompt": true,
-  "category": "user_patterns",
-  "pattern_refs": ["en/user-patterns.md:4"]
+  "category": "user_1pt",
+  "pattern_refs": ["en/user-1pt.md:4"]
 }
 ```
 

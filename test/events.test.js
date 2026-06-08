@@ -28,12 +28,19 @@ test('converts a matched user event to aggregate increments', () => {
     pattern_match: {
       matched: true,
       lineHits: 3,
+      hits: [
+        { category: 'user_1pt', file: 'user-1pt.md', line: 1 },
+        { category: 'user_1pt', file: 'user-1pt.md', line: 2 },
+        { category: 'user_2pt', file: 'user-2pt.md', line: 1 },
+      ],
     },
   });
 
   assert.equal(increment.totals.user_messages, 1);
-  assert.equal(increment.matches.user_patterns.events, 1);
-  assert.equal(increment.matches.user_patterns.line_hits, 3);
+  assert.equal(increment.matches.user_1pt.events, 1);
+  assert.equal(increment.matches.user_1pt.line_hits, 2);
+  assert.equal(increment.matches.user_2pt.events, 1);
+  assert.equal(increment.matches.user_2pt.line_hits, 1);
   assert.equal(increment.totals.assistant_messages, 0);
 });
 
@@ -43,6 +50,10 @@ test('converts assistant, tool, permission, and runtime flags', () => {
     pattern_match: {
       matched: true,
       lineHits: 2,
+      hits: [
+        { category: 'assistant_1pt', file: 'assistant-1pt.md', line: 1 },
+        { category: 'assistant_2pt', file: 'assistant-2pt.md', line: 1 },
+      ],
     },
     flags: {
       session_start: true,
@@ -61,7 +72,9 @@ test('converts assistant, tool, permission, and runtime flags', () => {
   assert.equal(increment.totals.permission_requests, 1);
   assert.equal(increment.totals.permission_denied, 1);
   assert.equal(increment.totals.runtime_interrupts, 1);
-  assert.equal(increment.matches.assistant_patterns.events, 1);
-  assert.equal(increment.matches.assistant_patterns.line_hits, 2);
+  assert.equal(increment.matches.assistant_1pt.events, 1);
+  assert.equal(increment.matches.assistant_1pt.line_hits, 1);
+  assert.equal(increment.matches.assistant_2pt.events, 1);
+  assert.equal(increment.matches.assistant_2pt.line_hits, 1);
 });
 // harn:end normalized-event-increments

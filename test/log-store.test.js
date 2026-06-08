@@ -32,21 +32,22 @@ test('creates a minimal aggregate-only daily log', () => {
   assert.deepEqual(Object.keys(log).sort(), ['date', 'matches', 'schema_version', 'totals', 'updated_at']);
   assert.equal(log.date, '2026-06-08');
   assert.equal(log.totals.user_messages, 0);
-  assert.equal(log.matches.user_patterns.events, 0);
+  assert.equal(log.matches.user_1pt.events, 0);
+  assert.equal(log.matches.user_2pt.events, 0);
   assert.equal(Object.hasOwn(log, 'text'), false);
 });
 
 test('applies aggregate increments without storing event text', () => {
   const increment = emptyIncrement();
   increment.totals.user_messages = 1;
-  increment.matches.user_patterns.events = 1;
-  increment.matches.user_patterns.line_hits = 3;
+  increment.matches.user_1pt.events = 1;
+  increment.matches.user_1pt.line_hits = 3;
 
   const log = applyIncrement(createDailyLog('2026-06-08'), increment, new Date('2026-06-08T03:00:00.000Z'));
 
   assert.equal(log.totals.user_messages, 1);
-  assert.equal(log.matches.user_patterns.events, 1);
-  assert.equal(log.matches.user_patterns.line_hits, 3);
+  assert.equal(log.matches.user_1pt.events, 1);
+  assert.equal(log.matches.user_1pt.line_hits, 3);
   assert.equal(JSON.stringify(log).includes('raw prompt'), false);
 });
 
@@ -69,7 +70,7 @@ test('normalizes daily logs to aggregate-only fields', () => {
     raw_prompt: 'sanitized raw prompt',
     command: 'sanitized command',
     totals: { user_messages: 1 },
-    matches: { user_patterns: { events: 1, line_hits: 1 } },
+    matches: { user_1pt: { events: 1, line_hits: 1 } },
   }, date);
 
   writeDailyLog(normalized, { baseDir });
@@ -119,14 +120,14 @@ test('updates daily logs inside the lock using aggregate increments', () => {
   const date = '2026-06-08';
   const increment = emptyIncrement();
   increment.totals.user_messages = 1;
-  increment.matches.user_patterns.events = 1;
+  increment.matches.user_1pt.events = 1;
 
   updateDailyLog(date, increment, options);
   updateDailyLog(date, increment, options);
 
   const log = readDailyLog(date, options);
   assert.equal(log.totals.user_messages, 2);
-  assert.equal(log.matches.user_patterns.events, 2);
+  assert.equal(log.matches.user_1pt.events, 2);
   assert.equal(fs.existsSync(dailyLockPath(date, options)), false);
 });
 // harn:end daily-log-locking

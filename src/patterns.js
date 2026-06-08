@@ -4,8 +4,8 @@ const fs = require('fs');
 const path = require('path');
 
 const SCOPE_FILES = {
-  user: 'user-patterns.md',
-  assistant: 'assistant-patterns.md',
+  user: ['user-1pt.md', 'user-2pt.md'],
+  assistant: ['assistant-1pt.md', 'assistant-2pt.md'],
 };
 
 function packageRoot() {
@@ -16,36 +16,46 @@ function categoryKey(fileName) {
   return path.basename(fileName, '.md').replace(/-/g, '_');
 }
 
-function patternPathForScope(scope, options = {}) {
-  const fileName = SCOPE_FILES[scope];
-  if (!fileName) {
+function patternFileNamesForScope(scope) {
+  const fileNames = SCOPE_FILES[scope];
+  if (!fileNames) {
     throw new Error(`Unknown pattern scope: ${scope}`);
   }
-  const locale = options.locale || 'en';
-  const root = options.root || packageRoot();
-  return path.join(root, 'patterns', locale, fileName);
+  return fileNames;
 }
 
-// harn:assume scope-pattern-loader ref=loader-api
-function loadPatterns(scope, options = {}) {
-  const filePath = patternPathForScope(scope, options);
-  const fileName = path.basename(filePath);
-  const category = categoryKey(fileName);
-  const raw = fs.readFileSync(filePath, 'utf8');
+function patternPathsForScope(scope, options = {}) {
+  const fileNames = patternFileNamesForScope(scope);
+  const locale = options.locale || 'en';
+  const root = options.root || packageRoot();
+  return fileNames.map((fileName) => path.join(root, 'patterns', locale, fileName));
+}
 
-  return raw.split(/\r?\n/).flatMap((line, index) => {
-    const source = line.trim();
-    if (!source) {
-      return [];
-    }
-    return [{
-      scope,
-      category,
-      file: fileName,
-      line: index + 1,
-      source,
-      regex: new RegExp(source, 'i'),
-    }];
+function patternPathForScope(scope, options = {}) {
+  return patternPathsForScope(scope, options)[0];
+}
+
+// harn:assume tiered-pattern-loader ref=loader-api
+function loadPatterns(scope, options = {}) {
+  return patternPathsForScope(scope, options).flatMap((filePath) => {
+    const fileName = path.basename(filePath);
+    const category = categoryKey(fileName);
+    const raw = fs.readFileSync(filePath, 'utf8');
+
+    return raw.split(/\r?\n/).flatMap((line, index) => {
+      const source = line.trim();
+      if (!source || source.startsWith('#')) {
+        return [];
+      }
+      return [{
+        scope,
+        category,
+        file: fileName,
+        line: index + 1,
+        source,
+        regex: new RegExp(source, 'i'),
+      }];
+    });
   });
 }
 
@@ -71,12 +81,14 @@ function matchPatterns(scope, text, options = {}) {
     hits,
   };
 }
-// harn:end scope-pattern-loader
+// harn:end tiered-pattern-loader
 
 module.exports = {
   SCOPE_FILES,
   categoryKey,
   loadPatterns,
   matchPatterns,
+  patternFileNamesForScope,
   patternPathForScope,
+  patternPathsForScope,
 };

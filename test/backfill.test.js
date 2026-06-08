@@ -22,8 +22,8 @@ function tempBase() {
 function userIncrement(count) {
   const increment = emptyIncrement();
   increment.totals.user_messages = count;
-  increment.matches.user_patterns.events = count;
-  increment.matches.user_patterns.line_hits = count * 2;
+  increment.matches.user_1pt.events = count;
+  increment.matches.user_1pt.line_hits = count * 2;
   return increment;
 }
 
@@ -39,7 +39,7 @@ test('groups increments by date and creates missing daily logs', () => {
 
   assert.deepEqual(result, { created: 1, skipped: 0, overwritten: 0 });
   assert.equal(log.totals.user_messages, 3);
-  assert.equal(log.matches.user_patterns.line_hits, 6);
+  assert.equal(log.matches.user_1pt.line_hits, 6);
 });
 
 test('skips existing daily logs unless overwrite is set', () => {

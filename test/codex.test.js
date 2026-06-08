@@ -52,8 +52,8 @@ test('handles Codex user prompt hooks through aggregate storage', async () => {
 
   const log = readDailyLog('2026-06-08', { baseDir });
   assert.equal(log.totals.user_messages, 1);
-  assert.equal(log.matches.user_patterns.events, 1);
-  assert.equal(log.matches.user_patterns.line_hits >= 2, true);
+  assert.equal(log.matches.user_1pt.events, 1);
+  assert.equal(log.matches.user_1pt.line_hits >= 2, true);
 });
 
 test('merges Codex hook config without duplicating didmyaigetdumber entries', () => {

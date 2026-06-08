@@ -26,6 +26,49 @@ function createNormalizedEvent(input = {}) {
   };
 }
 
+function defaultCategoryForScope(scope) {
+  if (scope === 'user') {
+    return 'user_1pt';
+  }
+  if (scope === 'assistant') {
+    return 'assistant_1pt';
+  }
+  return null;
+}
+
+function categoryHitCounts(event) {
+  const hits = event.pattern_match && Array.isArray(event.pattern_match.hits)
+    ? event.pattern_match.hits
+    : [];
+  const counts = new Map();
+
+  for (const hit of hits) {
+    if (!hit || !hit.category) {
+      continue;
+    }
+    counts.set(hit.category, (counts.get(hit.category) || 0) + 1);
+  }
+
+  if (counts.size === 0 && event.pattern_match && event.pattern_match.matched) {
+    const fallback = defaultCategoryForScope(event.scope);
+    if (fallback) {
+      counts.set(fallback, event.pattern_match.lineHits || 1);
+    }
+  }
+
+  return counts;
+}
+
+function applyPatternIncrement(increment, event) {
+  for (const [category, lineHits] of categoryHitCounts(event)) {
+    if (!increment.matches[category]) {
+      continue;
+    }
+    increment.matches[category].events += 1;
+    increment.matches[category].line_hits += lineHits;
+  }
+}
+
 function incrementFromEvent(input = {}) {
   const event = createNormalizedEvent(input);
   const increment = emptyIncrement();
@@ -51,18 +94,12 @@ function incrementFromEvent(input = {}) {
 
   if (event.scope === 'user') {
     increment.totals.user_messages += 1;
-    if (event.pattern_match && event.pattern_match.matched) {
-      increment.matches.user_patterns.events += 1;
-      increment.matches.user_patterns.line_hits += event.pattern_match.lineHits || 0;
-    }
+    applyPatternIncrement(increment, event);
   }
 
   if (event.scope === 'assistant') {
     increment.totals.assistant_messages += 1;
-    if (event.pattern_match && event.pattern_match.matched) {
-      increment.matches.assistant_patterns.events += 1;
-      increment.matches.assistant_patterns.line_hits += event.pattern_match.lineHits || 0;
-    }
+    applyPatternIncrement(increment, event);
   }
 
   return increment;

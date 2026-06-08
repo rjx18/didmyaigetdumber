@@ -42,8 +42,10 @@ function writeJson(filePath, value) {
 function writePatterns(root, userPattern, assistantPattern) {
   const dir = path.join(root, 'patterns', 'en');
   fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, 'user-patterns.md'), `${userPattern}\n`);
-  fs.writeFileSync(path.join(dir, 'assistant-patterns.md'), `${assistantPattern}\n`);
+  fs.writeFileSync(path.join(dir, 'user-1pt.md'), `${userPattern}\n`);
+  fs.writeFileSync(path.join(dir, 'user-2pt.md'), '\n');
+  fs.writeFileSync(path.join(dir, 'assistant-1pt.md'), `${assistantPattern}\n`);
+  fs.writeFileSync(path.join(dir, 'assistant-2pt.md'), '\n');
 }
 
 // harn:assume doctor-health-checks ref=doctor-tests

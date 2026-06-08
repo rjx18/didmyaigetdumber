@@ -1,0 +1,13 @@
+id: tiered-pattern-loader
+hash: a-f3eb407b3362
+title: Tiered pattern loader
+state: active
+statement: Pattern loading maps `user` and `assistant` scopes to all package
+  tier files for that scope, compiles non-comment regex lines
+  case-insensitively, and reports per-file categories and line counts without
+  retaining matched text.
+depends_on:
+  - tiered-scope-pattern-files
+  - local-aggregate-privacy
+  - npm-cli-entrypoint
+created_by: tiered-pattern-files
