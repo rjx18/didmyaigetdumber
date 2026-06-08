@@ -1,0 +1,11 @@
+id: scoped-npm-package
+hash: a-ee6e814c4de0
+title: Scoped npm package
+state: active
+statement: The package is published as `@richhardry/didmyaigetdumber` while
+  keeping the `didmyaigetdumber` binary name, so users can run `npx
+  @richhardry/didmyaigetdumber@latest install` and installed hooks can call the
+  stable binary entrypoint.
+depends_on:
+  - npm-cli-entrypoint
+created_by: install-onboarding-cli

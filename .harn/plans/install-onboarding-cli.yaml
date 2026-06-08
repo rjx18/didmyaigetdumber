@@ -1,0 +1,89 @@
+id: install-onboarding-cli
+title: Add interactive install onboarding
+assumptions:
+  retire: []
+  create:
+    - id: scoped-npm-package
+      title: Scoped npm package
+      statement: The package is published as `@richhardry/didmyaigetdumber` while
+        keeping the `didmyaigetdumber` binary name, so users can run `npx
+        @richhardry/didmyaigetdumber@latest install` and installed hooks can
+        call the stable binary entrypoint.
+      reason: The public install command must work from the requested scoped npm
+        package spec without depending on a temporary local checkout path.
+      depends_on:
+        - npm-cli-entrypoint
+    - id: interactive-install-onboarding
+      title: Interactive install onboarding
+      statement: The install command presents branded word art, asks which agent hooks
+        to install, offers aggregate backfill, and records an explicit
+        privacy-preserving telemetry opt-in preference, so first-run setup is
+        guided without storing raw prompts, paths, command text, or assistant
+        messages in logs.
+      reason: Users need a friendly one-command onboarding path for hooks, historical
+        data, and telemetry consent.
+      depends_on:
+        - scoped-npm-package
+        - codex-live-hook-counting
+        - claude-live-hook-counting
+        - codex-historical-backfill
+        - claude-historical-backfill
+        - local-aggregate-privacy
+  reviewed:
+    - id: npm-cli-entrypoint
+      outcome: unchanged
+      reason: Phase adds a new command route while preserving the existing binary
+        entrypoint.
+    - id: codex-live-hook-counting
+      outcome: unchanged
+      reason: Install reuses the existing Codex hook merge behavior.
+    - id: claude-live-hook-counting
+      outcome: unchanged
+      reason: Install reuses the existing Claude hook merge behavior.
+    - id: codex-historical-backfill
+      outcome: unchanged
+      reason: Install can run combined backfill through the existing dispatcher.
+    - id: claude-historical-backfill
+      outcome: unchanged
+      reason: Install can run combined backfill through the existing dispatcher.
+    - id: local-aggregate-privacy
+      outcome: unchanged
+      reason: Install stores a boolean telemetry preference outside daily logs and
+        keeps logs aggregate-only.
+anchors:
+  scoped-npm-package:
+    package-scope:
+      action: change
+      reason: Rename package metadata and lockfile to the scoped package.
+    readme-install:
+      action: change
+      reason: Document the requested npx install command.
+  interactive-install-onboarding:
+    install-config:
+      action: change
+      reason: Add a minimal local config for telemetry preference.
+    install-command:
+      action: change
+      reason: Add the interactive installer and noninteractive options.
+    install-tests:
+      action: change
+      reason: Verify installer output, config writes, hook installs, and combined
+        backfill.
+  npm-cli-entrypoint:
+    cli-dispatch:
+      action: change
+      reason: Route the new install command and parse its options.
+  local-aggregate-privacy:
+    progress-privacy-storage:
+      action: keep
+      reason: Privacy assumption remains unchanged.
+files:
+  - package.json
+  - package-lock.json
+  - README.md
+  - src/cli.js
+  - src/config.js
+  - src/install.js
+  - test/install.test.js
+applied:
+  applied_at: 2026-06-08T06:14:30.042Z

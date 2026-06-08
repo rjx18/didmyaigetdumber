@@ -1,5 +1,5 @@
 {
-  "name": "didmyaigetdumber",
+  "name": "@richhardry/didmyaigetdumber",
   "version": "0.1.0",
   "description": "Local-first hook telemetry for AI coding agents.",
   "license": "MIT",

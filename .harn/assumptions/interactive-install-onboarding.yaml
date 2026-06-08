@@ -1,0 +1,17 @@
+id: interactive-install-onboarding
+hash: a-35610e02f345
+title: Interactive install onboarding
+state: active
+statement: The install command presents branded word art, asks which agent hooks
+  to install, offers aggregate backfill, and records an explicit
+  privacy-preserving telemetry opt-in preference, so first-run setup is guided
+  without storing raw prompts, paths, command text, or assistant messages in
+  logs.
+depends_on:
+  - scoped-npm-package
+  - codex-live-hook-counting
+  - claude-live-hook-counting
+  - codex-historical-backfill
+  - claude-historical-backfill
+  - local-aggregate-privacy
+created_by: install-onboarding-cli

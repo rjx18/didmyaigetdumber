@@ -5,6 +5,7 @@ const { runBackfill } = require('./backfill');
 const { runDoctor } = require('./doctor');
 const { initCodex } = require('./init/codex');
 const { initClaude } = require('./init/claude');
+const { runInstall } = require('./install');
 const { runReport } = require('./report');
 const { startServer } = require('./server');
 
@@ -12,6 +13,7 @@ const HELP = `didmyaigetdumber
 
 Usage:
   didmyaigetdumber hook
+  didmyaigetdumber install [--agent all|codex|claude|none] [--yes] [--telemetry on|off] [--no-backfill]
   didmyaigetdumber init codex [--backfill]
   didmyaigetdumber init claude [--backfill]
   didmyaigetdumber init all [--backfill]
@@ -31,9 +33,15 @@ function parseOptions(args) {
     const arg = args[i];
     if (arg === '--backfill') {
       options.backfill = true;
+    } else if (arg === '--no-backfill') {
+      options.backfill = false;
     } else if (arg === '--overwrite') {
       options.overwrite = true;
-    } else if (arg === '--port' || arg === '--days') {
+    } else if (arg === '--yes' || arg === '-y') {
+      options.yes = true;
+    } else if (arg === '--dry-run') {
+      options.dryRun = true;
+    } else if (arg === '--port' || arg === '--days' || arg === '--agent' || arg === '--telemetry' || arg === '--command') {
       const value = args[i + 1];
       if (!value || value.startsWith('--')) {
         throw new Error(`${arg} requires a value`);
@@ -58,6 +66,12 @@ async function initTarget(target, options, io) {
     return initClaude(options, io);
   }
   if (target === 'all') {
+    if (options.backfill) {
+      const codexCode = await initCodex({ ...options, backfill: false }, io);
+      const claudeCode = await initClaude({ ...options, backfill: false }, io);
+      const backfillCode = await runBackfill('all', options, io);
+      return codexCode || claudeCode || backfillCode;
+    }
     const codexCode = await initCodex(options, io);
     const claudeCode = await initClaude(options, io);
     return codexCode || claudeCode;
@@ -90,6 +104,9 @@ async function run(args, io) {
 
   if (command === 'hook') {
     return handleHook(options, io);
+  }
+  if (command === 'install') {
+    return runInstall(options, io);
   }
   if (command === 'init') {
     return initTarget(positional[0], options, io);
