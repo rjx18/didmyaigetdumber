@@ -1,0 +1,13 @@
+id: local-dashboard-server
+hash: a-ff7904f4b412
+title: Local dashboard server
+state: active
+statement: The start command runs a localhost HTTP server that serves an
+  aggregate-only `/api/days` endpoint and a compact browser dashboard with
+  per-day total, user, and assistant pattern percentages, so users can inspect
+  trends without uploading telemetry or exposing raw transcript data.
+depends_on:
+  - daily-report-percentages
+  - local-aggregate-privacy
+  - npm-cli-entrypoint
+created_by: phase-12-local-chart-server

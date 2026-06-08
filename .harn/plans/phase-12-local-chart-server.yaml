@@ -1,0 +1,55 @@
+id: phase-12-local-chart-server
+title: Add local chart server
+assumptions:
+  retire: []
+  create:
+    - id: local-dashboard-server
+      title: Local dashboard server
+      statement: The start command runs a localhost HTTP server that serves an
+        aggregate-only `/api/days` endpoint and a compact browser dashboard with
+        per-day total, user, and assistant pattern percentages, so users can
+        inspect trends without uploading telemetry or exposing raw transcript
+        data.
+      reason: The v1 CLI needs a local visual trend view after terminal reporting.
+      depends_on:
+        - daily-report-percentages
+        - local-aggregate-privacy
+        - npm-cli-entrypoint
+  reviewed:
+    - id: daily-report-percentages
+      outcome: unchanged
+      reason: Phase 12 reuses report rows and percentage semantics for API data.
+    - id: local-aggregate-privacy
+      outcome: unchanged
+      reason: Phase 12 serves aggregate counters and percentages only.
+    - id: npm-cli-entrypoint
+      outcome: unchanged
+      reason: The start command route already exists and now starts the implementation.
+anchors:
+  local-dashboard-server:
+    server-http:
+      action: change
+      reason: Implement localhost HTTP routing and server startup.
+    server-dashboard:
+      action: change
+      reason: Serve a compact chart dashboard from aggregate API data.
+    server-tests:
+      action: change
+      reason: Verify `/api/days`, dashboard HTML, and server creation behavior.
+    progress-phase-12:
+      action: change
+      reason: Track Phase 12 completion.
+  daily-report-percentages:
+    progress-phase-11:
+      action: change
+      reason: Replace the Phase 11 placeholder with its actual commit hash.
+  local-aggregate-privacy:
+    progress-privacy-storage:
+      action: keep
+      reason: Privacy assumption remains unchanged.
+files:
+  - src/server.js
+  - test/server.test.js
+  - simple-hook-telemetry-progress.md
+applied:
+  applied_at: 2026-06-08T05:39:41.764Z

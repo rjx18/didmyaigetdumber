@@ -53,9 +53,11 @@
 | 10. Claude Code backfill | `phase-10-claude-backfill` | complete | `1e9b3c7` | Parse `~/.claude/projects/**/*.jsonl` aggregates only. |
 <!-- harn:end claude-historical-backfill -->
 <!-- harn:assume daily-report-percentages ref=progress-phase-11 -->
-| 11. Report command | `phase-11-report-command` | complete | phase commit | Terminal daily summary and rates. |
+| 11. Report command | `phase-11-report-command` | complete | `586d217` | Terminal daily summary and rates. |
 <!-- harn:end daily-report-percentages -->
-| 12. Local chart server | pending | pending | pending | Localhost dashboard and `/api/days`. |
+<!-- harn:assume local-dashboard-server ref=progress-phase-12 -->
+| 12. Local chart server | `phase-12-local-chart-server` | complete | phase commit | Localhost dashboard and `/api/days`. |
+<!-- harn:end local-dashboard-server -->
 | 13. Doctor command | pending | pending | pending | Pattern, log path, lock, and hook checks. |
 | 14. Privacy and safety review | pending | pending | pending | Verify no raw text/path/command storage. |
 | 15. Verification | pending | pending | pending | End-to-end simulated hooks/backfill/report/server checks. |
