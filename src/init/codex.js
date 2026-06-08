@@ -4,6 +4,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { CODEX_HOOK_EVENTS } = require('../adapters/codex');
+const { runCodexBackfill } = require('../backfills/codex');
 
 function defaultCodexHooksPath() {
   return path.join(os.homedir(), '.codex', 'hooks.json');
@@ -48,6 +49,11 @@ async function initCodex(options = {}, io) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, `${JSON.stringify(merged, null, 2)}\n`);
   io.stdout.write(`installed codex hooks: ${filePath}\n`);
+  // harn:assume codex-historical-backfill ref=codex-backfill-init
+  if (options.backfill) {
+    return runCodexBackfill(options, io);
+  }
+  // harn:end codex-historical-backfill
   return 0;
 }
 // harn:end codex-live-hook-counting

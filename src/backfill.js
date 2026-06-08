@@ -57,10 +57,24 @@ function writeBackfillDays(dayMap, options = {}) {
 }
 // harn:end backfill-idempotent-writes
 
-async function runBackfill(target, _options, io) {
+// harn:assume codex-historical-backfill ref=codex-backfill-dispatch
+async function runBackfill(target, options, io) {
+  if (target === 'codex') {
+    const { runCodexBackfill } = require('./backfills/codex');
+    return runCodexBackfill(options, io);
+  }
+
+  if (target === 'all') {
+    const { runCodexBackfill } = require('./backfills/codex');
+    const codexCode = await runCodexBackfill(options, io);
+    io.stdout.write('claude backfill is not implemented yet\n');
+    return codexCode;
+  }
+
   io.stdout.write(`${target} backfill is not implemented yet\n`);
   return 0;
 }
+// harn:end codex-historical-backfill
 
 module.exports = {
   dailyLogFromIncrement,

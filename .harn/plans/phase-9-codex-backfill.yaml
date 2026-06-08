@@ -1,0 +1,76 @@
+id: phase-9-codex-backfill
+title: Add Codex historical backfill
+assumptions:
+  retire: []
+  create:
+    - id: codex-historical-backfill
+      title: Codex historical backfill
+      statement: Codex historical backfill parses `~/.codex/sessions/**/*.jsonl`
+        records into daily aggregate increments from session metadata, visible
+        user and assistant message events, tool-call response items, and runtime
+        interruption events, so past Codex sessions can seed trend logs without
+        storing raw transcript or tool payload fields.
+      reason: Users need the `backfill codex` command and `init codex --backfill` flag
+        to populate daily percentages from existing local Codex logs.
+      depends_on:
+        - backfill-idempotent-writes
+        - normalized-event-increments
+        - scope-pattern-loader
+        - codex-live-hook-counting
+        - local-aggregate-privacy
+  reviewed:
+    - id: backfill-idempotent-writes
+      outcome: unchanged
+      reason: Phase 9 writes parsed Codex aggregates through the shared backfill
+        writer.
+    - id: normalized-event-increments
+      outcome: unchanged
+      reason: Phase 9 converts parsed Codex events into the existing increment model.
+    - id: scope-pattern-loader
+      outcome: unchanged
+      reason: Phase 9 uses the existing pattern loader for user and assistant text.
+    - id: codex-live-hook-counting
+      outcome: unchanged
+      reason: Phase 9 adds historical parsing and optional init backfill without
+        changing live hook payload counting.
+    - id: local-aggregate-privacy
+      outcome: unchanged
+      reason: Phase 9 parses transcript text in memory only and stores aggregate
+        counters.
+anchors:
+  codex-historical-backfill:
+    codex-backfill-parser:
+      action: change
+      reason: Parse Codex session JSONL files into daily aggregate increments.
+    codex-backfill-dispatch:
+      action: change
+      reason: Route `backfill codex` to the Codex parser and writer.
+    codex-backfill-init:
+      action: change
+      reason: Run Codex backfill when `init codex --backfill` is set.
+    codex-backfill-tests:
+      action: change
+      reason: Verify sanitized Codex JSONL backfill behavior and privacy boundaries.
+    progress-phase-9:
+      action: change
+      reason: Track Phase 9 completion.
+  codex-live-hook-counting:
+    codex-init:
+      action: change
+      reason: Add optional historical backfill after installing Codex hooks.
+  backfill-idempotent-writes:
+    progress-phase-8:
+      action: change
+      reason: Replace the Phase 8 placeholder with its actual commit hash.
+  local-aggregate-privacy:
+    progress-privacy-storage:
+      action: keep
+      reason: Privacy assumption remains unchanged.
+files:
+  - src/backfill.js
+  - src/backfills/codex.js
+  - src/init/codex.js
+  - test/codex-backfill.test.js
+  - simple-hook-telemetry-progress.md
+applied:
+  applied_at: 2026-06-08T05:15:50.268Z

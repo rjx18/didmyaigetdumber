@@ -1,0 +1,16 @@
+id: codex-historical-backfill
+hash: a-9ee271f32f99
+title: Codex historical backfill
+state: active
+statement: Codex historical backfill parses `~/.codex/sessions/**/*.jsonl`
+  records into daily aggregate increments from session metadata, visible user
+  and assistant message events, tool-call response items, and runtime
+  interruption events, so past Codex sessions can seed trend logs without
+  storing raw transcript or tool payload fields.
+depends_on:
+  - backfill-idempotent-writes
+  - normalized-event-increments
+  - scope-pattern-loader
+  - codex-live-hook-counting
+  - local-aggregate-privacy
+created_by: phase-9-codex-backfill
