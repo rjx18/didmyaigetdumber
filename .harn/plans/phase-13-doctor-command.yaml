@@ -1,0 +1,68 @@
+id: phase-13-doctor-command
+title: Expand doctor command checks
+assumptions:
+  retire: []
+  create:
+    - id: doctor-health-checks
+      title: Doctor health checks
+      statement: The doctor command verifies pattern compilation, aggregate log
+        directory writability, lock acquisition, and Codex and Claude hook
+        config presence without modifying hook settings, so users can diagnose
+        local setup while preserving aggregate-only telemetry behavior.
+      reason: The CLI needs a simple preflight command after hooks, backfill, report,
+        and server features exist.
+      depends_on:
+        - scope-pattern-loader
+        - daily-log-locking
+        - codex-live-hook-counting
+        - claude-live-hook-counting
+        - local-aggregate-privacy
+  reviewed:
+    - id: scope-pattern-loader
+      outcome: unchanged
+      reason: Phase 13 still compiles the same pattern files.
+    - id: daily-log-locking
+      outcome: unchanged
+      reason: Phase 13 acquires and releases an existing date-scoped lock for
+        diagnostics.
+    - id: codex-live-hook-counting
+      outcome: unchanged
+      reason: Phase 13 reads Codex hook config presence without changing hook install
+        semantics.
+    - id: claude-live-hook-counting
+      outcome: unchanged
+      reason: Phase 13 reads Claude hook config presence without changing hook install
+        semantics.
+    - id: local-aggregate-privacy
+      outcome: unchanged
+      reason: Phase 13 reports setup status and never stores transcript data.
+anchors:
+  doctor-health-checks:
+    doctor-health:
+      action: change
+      reason: Add storage, lock, and hook config checks around the existing pattern
+        check.
+    doctor-tests:
+      action: change
+      reason: Verify doctor output, warnings, and hard pattern failures.
+    progress-phase-13:
+      action: change
+      reason: Track Phase 13 completion.
+  scope-pattern-loader:
+    doctor-pattern-check:
+      action: change
+      reason: Expand the existing pattern-only doctor command.
+  local-dashboard-server:
+    progress-phase-12:
+      action: change
+      reason: Replace the Phase 12 placeholder with its actual commit hash.
+  local-aggregate-privacy:
+    progress-privacy-storage:
+      action: keep
+      reason: Privacy assumption remains unchanged.
+files:
+  - src/doctor.js
+  - test/doctor.test.js
+  - simple-hook-telemetry-progress.md
+applied:
+  applied_at: 2026-06-08T05:43:02.036Z

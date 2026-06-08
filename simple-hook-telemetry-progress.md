@@ -56,8 +56,10 @@
 | 11. Report command | `phase-11-report-command` | complete | `586d217` | Terminal daily summary and rates. |
 <!-- harn:end daily-report-percentages -->
 <!-- harn:assume local-dashboard-server ref=progress-phase-12 -->
-| 12. Local chart server | `phase-12-local-chart-server` | complete | phase commit | Localhost dashboard and `/api/days`. |
+| 12. Local chart server | `phase-12-local-chart-server` | complete | `a104e3e` | Localhost dashboard and `/api/days`. |
 <!-- harn:end local-dashboard-server -->
-| 13. Doctor command | pending | pending | pending | Pattern, log path, lock, and hook checks. |
+<!-- harn:assume doctor-health-checks ref=progress-phase-13 -->
+| 13. Doctor command | `phase-13-doctor-command` | complete | phase commit | Pattern, log path, lock, and hook checks. |
+<!-- harn:end doctor-health-checks -->
 | 14. Privacy and safety review | pending | pending | pending | Verify no raw text/path/command storage. |
 | 15. Verification | pending | pending | pending | End-to-end simulated hooks/backfill/report/server checks. |

@@ -1,0 +1,15 @@
+id: doctor-health-checks
+hash: a-539de3352f37
+title: Doctor health checks
+state: active
+statement: The doctor command verifies pattern compilation, aggregate log
+  directory writability, lock acquisition, and Codex and Claude hook config
+  presence without modifying hook settings, so users can diagnose local setup
+  while preserving aggregate-only telemetry behavior.
+depends_on:
+  - scope-pattern-loader
+  - daily-log-locking
+  - codex-live-hook-counting
+  - claude-live-hook-counting
+  - local-aggregate-privacy
+created_by: phase-13-doctor-command
