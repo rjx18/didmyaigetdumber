@@ -32,9 +32,11 @@
 | 3. Minimal local storage | `phase-3-log-store` | complete | `ea400d1` | Daily schema and default counters. |
 <!-- harn:end daily-aggregate-log-schema -->
 <!-- harn:assume daily-log-locking ref=progress-phase-4 -->
-| 4. Locking and atomic writes | `phase-4-locking` | complete | phase commit | Busy-wait lock and atomic JSON writes. |
+| 4. Locking and atomic writes | `phase-4-locking` | complete | `0ba2a96` | Busy-wait lock and atomic JSON writes. |
 <!-- harn:end daily-log-locking -->
-| 5. Normalized event model | pending | pending | pending | In-memory event and increment objects. |
+<!-- harn:assume normalized-event-increments ref=progress-phase-5 -->
+| 5. Normalized event model | `phase-5-event-model` | complete | phase commit | In-memory event and increment objects. |
+<!-- harn:end normalized-event-increments -->
 | 6. Codex live hook adapter | pending | pending | pending | Codex hook normalization and init. |
 | 7. Claude Code live hook adapter | pending | pending | pending | Claude hook normalization and init. |
 | 8. Historical backfill | pending | pending | pending | Shared backfill write behavior. |

@@ -1,0 +1,63 @@
+id: phase-5-event-model
+title: Add normalized event increment model
+assumptions:
+  retire: []
+  create:
+    - id: normalized-event-increments
+      title: Normalized event increments
+      statement: Normalized hook events convert to aggregate increment objects in
+        memory, so adapters can share one storage path without writing
+        normalized events or raw text.
+      reason: Codex, Claude, and backfill flows need one counter-mapping contract
+        before adapters are implemented.
+      depends_on:
+        - daily-aggregate-log-schema
+        - daily-log-locking
+        - scope-pattern-loader
+        - local-aggregate-privacy
+  reviewed:
+    - id: daily-aggregate-log-schema
+      outcome: unchanged
+      reason: Phase 5 emits increments for the existing daily schema.
+    - id: daily-log-locking
+      outcome: unchanged
+      reason: Phase 5 does not change the locked write path.
+    - id: scope-pattern-loader
+      outcome: unchanged
+      reason: Phase 5 consumes pattern match summaries without changing matching.
+    - id: local-aggregate-privacy
+      outcome: unchanged
+      reason: Phase 5 keeps normalized events in memory only.
+anchors:
+  normalized-event-increments:
+    event-increment-model:
+      action: change
+      reason: Add normalized event defaults and increment conversion.
+    event-increment-tests:
+      action: change
+      reason: Verify user, assistant, runtime, tool, and permission counters.
+    progress-phase-5:
+      action: change
+      reason: Track Phase 5 completion.
+  daily-aggregate-log-schema:
+    progress-phase-3:
+      action: keep
+      reason: Daily schema progress remains unchanged.
+  daily-log-locking:
+    progress-phase-4:
+      action: keep
+      reason: Locking progress remains unchanged.
+  scope-pattern-loader:
+    progress-phase-2:
+      action: keep
+      reason: Pattern loader progress remains unchanged.
+  local-aggregate-privacy:
+    progress-privacy-storage:
+      action: keep
+      reason: Privacy assumption remains unchanged.
+files:
+  - src/events.js
+  - test/events.test.js
+  - simple-hook-telemetry-progress.md
+applied:
+  applied_at: 2026-06-08T04:56:37.992Z

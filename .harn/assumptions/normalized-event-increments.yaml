@@ -1,0 +1,13 @@
+id: normalized-event-increments
+hash: a-886f2700cae2
+title: Normalized event increments
+state: active
+statement: Normalized hook events convert to aggregate increment objects in
+  memory, so adapters can share one storage path without writing normalized
+  events or raw text.
+depends_on:
+  - daily-aggregate-log-schema
+  - daily-log-locking
+  - scope-pattern-loader
+  - local-aggregate-privacy
+created_by: phase-5-event-model
