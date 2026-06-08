@@ -1,0 +1,55 @@
+id: phase-3-log-store
+title: Add minimal daily log store
+assumptions:
+  retire: []
+  create:
+    - id: daily-aggregate-log-schema
+      title: Daily aggregate log schema
+      statement: Daily telemetry logs contain only date-scoped aggregate counters for
+        totals and pattern matches, so reports can calculate rates without
+        storing raw event text or identifiers.
+      reason: Hook, backfill, report, and dashboard features all depend on the same
+        minimal local JSON schema.
+      depends_on:
+        - local-aggregate-privacy
+        - scope-pattern-loader
+  reviewed:
+    - id: local-aggregate-privacy
+      outcome: unchanged
+      reason: Phase 3 implements aggregate-only storage helpers.
+    - id: scope-pattern-loader
+      outcome: unchanged
+      reason: Phase 3 consumes pattern match counts but does not change pattern
+        matching behavior.
+    - id: npm-cli-entrypoint
+      outcome: unchanged
+      reason: Phase 3 does not change command routing.
+anchors:
+  daily-aggregate-log-schema:
+    store-schema:
+      action: change
+      reason: Implement default schema, normalization, and increment merging.
+    store-tests:
+      action: change
+      reason: Verify schema initialization and aggregate-only increment behavior.
+    progress-phase-3:
+      action: change
+      reason: Track Phase 3 completion.
+  local-aggregate-privacy:
+    progress-privacy-storage:
+      action: keep
+      reason: Privacy assumption remains unchanged.
+  scope-pattern-loader:
+    progress-phase-2:
+      action: keep
+      reason: Pattern loader progress remains unchanged.
+  npm-cli-entrypoint:
+    progress-phase-1:
+      action: keep
+      reason: CLI entrypoint progress remains unchanged.
+files:
+  - src/log-store.js
+  - test/log-store.test.js
+  - simple-hook-telemetry-progress.md
+applied:
+  applied_at: 2026-06-08T04:53:38.058Z

@@ -1,0 +1,11 @@
+id: daily-aggregate-log-schema
+hash: a-c4061b74cbb6
+title: Daily aggregate log schema
+state: active
+statement: Daily telemetry logs contain only date-scoped aggregate counters for
+  totals and pattern matches, so reports can calculate rates without storing raw
+  event text or identifiers.
+depends_on:
+  - local-aggregate-privacy
+  - scope-pattern-loader
+created_by: phase-3-log-store

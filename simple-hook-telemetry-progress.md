@@ -26,9 +26,11 @@
 | 1. Package and CLI skeleton | `phase-1-cli-skeleton` | complete | `52f2a85` | Created executable CLI and command routing. |
 <!-- harn:end npm-cli-entrypoint -->
 <!-- harn:assume scope-pattern-loader ref=progress-phase-2 -->
-| 2. Pattern loader | `phase-2-pattern-loader` | complete | phase commit | Compile scope pattern files and return line hits. |
+| 2. Pattern loader | `phase-2-pattern-loader` | complete | `7509c94` | Compile scope pattern files and return line hits. |
 <!-- harn:end scope-pattern-loader -->
-| 3. Minimal local storage | pending | pending | pending | Daily schema and default counters. |
+<!-- harn:assume daily-aggregate-log-schema ref=progress-phase-3 -->
+| 3. Minimal local storage | `phase-3-log-store` | complete | phase commit | Daily schema and default counters. |
+<!-- harn:end daily-aggregate-log-schema -->
 | 4. Locking and atomic writes | pending | pending | pending | Busy-wait lock and atomic JSON writes. |
 | 5. Normalized event model | pending | pending | pending | In-memory event and increment objects. |
 | 6. Codex live hook adapter | pending | pending | pending | Codex hook normalization and init. |
