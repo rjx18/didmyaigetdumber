@@ -153,12 +153,12 @@ const SECTIONS = {
   activity: {
     title: "Activity", blurb: "Raw throughput of the system: how much conversation is happening and how it’s shaped.",
     chart: { title: "Sessions per day", sub: "distinct sessions", pick: (s) => s.activity.sessions, fmt: "int", color: "ink", goodDir: null, now: (s) => FMT.int(H.last(s.activity.sessions)) },
-    items: [["Sessions · turns · messages / day", "grouped bar"], ["User vs assistant messages", "stacked bar"], ["Compactions per day", "KPI + bar"], ["Turns per session", "distribution"]],
+    items: [["Sessions · turns · messages / day", "grouped bar"], ["User vs assistant messages", "stacked bar"], ["Compactions per day", "KPI + bar"], ["Turns per session", "daily ratio (no per-session distribution — aggregate-only)"]],
   },
   tokens: {
     title: "Tokens", blurb: "Where the tokens go — by type, by model, and per session.",
     chart: { title: "Tokens per day", sub: "all token types", pick: (s) => s.tokens.total, fmt: "tok", color: "ink", goodDir: null, now: (s) => FMT.tok(H.last(s.tokens.total)) },
-    items: [["Token composition", "input / output / cache / reasoning — stacked"], ["Per-model token mix", "stacked bar"], ["Tokens per session", "distribution"]],
+    items: [["Token composition", "input / output / cache / reasoning — stacked"], ["Per-model token mix", "stacked bar"], ["Tokens per session", "daily mean (no per-session distribution — aggregate-only)"]],
   },
   cache: {
     title: "Cache", blurb: "Cache economics — how much we’re reading back vs paying to create.",
@@ -178,7 +178,7 @@ const SECTIONS = {
   timing: {
     title: "Timing", blurb: "Latency from the user’s seat — how fast it starts, runs, and finishes.",
     chart: { title: "Avg turn duration", sub: "wall-clock seconds per turn", pick: (s) => s.timing.turnDuration, fmt: "sec", color: "ink", goodDir: "down", now: (s) => H.last(s.timing.turnDuration).toFixed(1) + "s" },
-    items: [["Time to first token", "line"], ["Avg tool latency", "line / bars by tool"], ["Output tokens / sec", "line + KPI"]],
+    items: [["Time to first token", "line"], ["Avg tool latency by tool", "bars — pending per-tool latency API (backlog 6)"], ["Output tokens / sec", "line + KPI"]],
   },
   limits: {
     title: "Rate limits", blurb: "Codex 5-hour and weekly windows — estimated time to exhaustion at the current burn, and time to reset.",

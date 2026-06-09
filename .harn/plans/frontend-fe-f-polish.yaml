@@ -1,0 +1,23 @@
+id: frontend-fe-f-polish
+title: Polish the dashboard branding, placeholders, and docs
+assumptions:
+  retire: []
+  create: []
+  reviewed:
+    - id: ui-live-data-binding
+      outcome: unchanged
+      reason: Branding text, "coming soon" placeholder labels, and README copy are
+        cosmetic; the data binding, endpoints, and render paths are untouched.
+    - id: local-aggregate-privacy
+      outcome: unchanged
+      reason: The README additions describe the dashboard and point to
+        BACKEND_BACKLOG.md; they add no code and keep the aggregate-only
+        invariant.
+anchors: {}
+files:
+  - src/ui/app.jsx
+  - src/ui/sections.jsx
+  - README.md
+  - frontend-dashboard-progress.md
+applied:
+  applied_at: 2026-06-09T03:33:11.412Z

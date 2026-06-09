@@ -46,4 +46,4 @@ does **not** wait on them.
 | FE-C. Rate-limit rework (KPI-only burn) | `frontend-fe-c-rate-limits` | complete | phase commit | Lead with time-to-exhaustion + reset; burn rate is a current KPI (no sparkline until backlog #7). |
 | FE-D. Model toggle | `frontend-fe-d-model-toggle` | complete | phase commit | `models` selector; scope threads through hero/KPIs/sections; limits stay account-wide; label hygiene. |
 | FE-E. Granularity selector | `frontend-fe-e-granularity` | complete | phase commit | `1h·day·week·2w·month` detailed control via `granularity` URL param + reload; server re-buckets; 14-day KPIs/status unaffected; `1h` bounded server-side. |
-| FE-F. Gaps / prune / polish | `frontend-fe-f-polish` | planned | — | Branding, prune unsupported elements, per-tool-latency deferred to backlog #6, docs, e2e. |
+| FE-F. Gaps / prune / polish | `frontend-fe-f-polish` | complete | phase commit | Brand → didmyaigetdumber, relabel impossible per-session distributions and per-tool-latency (backlog #6) placeholders, README dashboard docs. |

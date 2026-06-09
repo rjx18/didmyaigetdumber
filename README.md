@@ -32,3 +32,14 @@ didmyaigetdumber start
 ```
 
 `didmyaigetdumber start` opens a local dashboard server. By default it listens on `http://127.0.0.1:3587`.
+
+The dashboard reads a single aggregate endpoint, `GET /api/ui?days=N&granularity=G`, and renders:
+
+- a server-computed **system status** verdict (healthy / degraded / insufficient-data) and **headline KPIs** over a trailing 14-day rolling window;
+- a **model toggle** ("All models" plus one entry per attributed model) that scopes every section to one model's metrics;
+- a **granularity** control (`1h · day · week · 2w · month`) that re-buckets the detailed charts server-side (`1h` is bounded to the hourly retention window);
+- **rate-limit** windows led by estimated **time-to-exhaustion** and time-to-reset (account-wide; not model-scoped).
+
+Everything stays aggregate-only and offline (vendored assets, same-origin fetch). Backend
+features the dashboard would still like — per-tool latency, a burn-rate series, and cost/$
+views — are tracked in [`BACKEND_BACKLOG.md`](BACKEND_BACKLOG.md).

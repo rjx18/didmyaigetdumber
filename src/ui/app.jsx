@@ -115,8 +115,8 @@ function App() {
         <div className="topbar-inner">
           <div className="brand">
             <span className="dot" />
-            Telemetry
-            <span className="sub">/ ai-ops</span>
+            didmyaigetdumber
+            <span className="sub">/ telemetry</span>
           </div>
           <span className="spacer" />
           {dataState === "ok" && (
