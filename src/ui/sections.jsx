@@ -148,42 +148,34 @@ const SECTIONS = {
   friction: {
     title: "Friction", blurb: "How often turns go sideways — interrupts, retries, corrections — split by who caused it and how severe.",
     chart: { title: "Friction rate", sub: "total · % of turns with a friction signal", pick: (s) => s.friction.total, fmt: "pct1", color: "accent", goodDir: "down", now: (s) => H.last(s.friction.total).toFixed(1) + "%" },
-    items: [["Friction by severity", "1pt vs 2pt tiers — stacked area"], ["User vs assistant split", "share of total friction"], ["Interrupts / retries per day", "bar"]],
   },
   activity: {
     title: "Activity", blurb: "Raw throughput of the system: how much conversation is happening and how it’s shaped.",
     chart: { title: "Sessions per day", sub: "distinct sessions", pick: (s) => s.activity.sessions, fmt: "int", color: "ink", goodDir: null, now: (s) => FMT.int(H.last(s.activity.sessions)) },
-    items: [["Sessions · turns · messages / day", "grouped bar"], ["User vs assistant messages", "stacked bar"], ["Compactions per day", "KPI + bar"], ["Turns per session", "daily ratio (no per-session distribution — aggregate-only)"]],
   },
   tokens: {
     title: "Tokens", blurb: "Where the tokens go — by type, by model, and per session.",
     chart: { title: "Tokens per day", sub: "all token types", pick: (s) => s.tokens.total, fmt: "tok", color: "ink", goodDir: null, now: (s) => FMT.tok(H.last(s.tokens.total)) },
-    items: [["Token composition", "input / output / cache / reasoning — stacked"], ["Per-model token mix", "stacked bar"], ["Tokens per session", "daily mean (no per-session distribution — aggregate-only)"]],
   },
   cache: {
     title: "Cache", blurb: "Cache economics — how much we’re reading back vs paying to create.",
     chart: { title: "Cache hit ratio", sub: "cache-read ÷ (read + creation + fresh input)", pick: (s) => s.cache.hit, fmt: "ratio", color: "ink", goodDir: "up", now: (s) => (H.last(s.cache.hit) * 100).toFixed(1) + "%" },
-    items: [["Read vs creation vs fresh input", "stacked bar"], ["Savings estimate", "KPI"]],
   },
   reasoning: {
     title: "Reasoning", blurb: "Thinking budget — exact for Codex, estimated for Claude.",
     chart: { title: "Reasoning-token share (Codex)", sub: "reasoning ÷ output tokens · exact", pick: (s) => s.reasoning.codex, fmt: "ratio", color: "accent", goodDir: null, now: (s) => (H.last(s.reasoning.codex) * 100).toFixed(1) + "%" },
-    items: [["Thinking-char share (Claude)", "line + KPI · estimate"]],
   },
   tools: {
     title: "Tools", blurb: "What the assistant reaches for, how much it produces, and where it fails.",
     bars: true,
-    items: [["Tool output share", "output chars by tool"], ["Tool error rate by name", "good / bad bars"], ["Avg tool calls / message", "KPI + line"]],
   },
   timing: {
     title: "Timing", blurb: "Latency from the user’s seat — how fast it starts, runs, and finishes.",
     chart: { title: "Avg turn duration", sub: "wall-clock seconds per turn", pick: (s) => s.timing.turnDuration, fmt: "sec", color: "ink", goodDir: "down", now: (s) => H.last(s.timing.turnDuration).toFixed(1) + "s" },
-    items: [["Time to first token", "line"], ["Avg tool latency by tool", "bars — pending per-tool latency API (backlog 6)"], ["Output tokens / sec", "line + KPI"]],
   },
   limits: {
     title: "Rate limits", blurb: "Codex 5-hour and weekly windows — estimated time to exhaustion at the current burn, and time to reset.",
     limits: true,
-    items: [["Burn-rate sparkline", "pending backend backlog item 7"], ["Token allowance estimate", "shown when local token deltas are observed"]],
   },
 };
 
@@ -347,18 +339,6 @@ function SectionDetail({ id, scope }) {
       {cfg.chart && <FeaturedChart chart={cfg.chart} scope={scope} />}
       {cfg.limits && <RateLimits />}
       {cfg.bars && <ToolBars scope={scope} />}
-      <div className="planned">
-        <div className="planned-label">Coming to this section</div>
-        {cfg.items.map((it, i) => (
-          <div className="pi" key={i}>
-            <span className="idx num">{String(i + 1).padStart(2, "0")}</span>
-            <span>
-              <span className="pt">{it[0]}</span>
-              <span className="pk">{it[1]}</span>
-            </span>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }

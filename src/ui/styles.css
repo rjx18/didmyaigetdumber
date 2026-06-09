@@ -295,9 +295,3 @@ body {
 .sd-head h2 { font-size: 27px; font-weight: 600; letter-spacing: -0.02em; color: var(--strong); margin: 0 0 7px; }
 .sd-head p { color: var(--muted); font-size: 14px; max-width: 58ch; line-height: 1.6; margin: 0; }
 
-.planned { margin-top: 52px; max-width: 720px; }
-.planned-label { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint); font-weight: 600; margin-bottom: 4px; }
-.planned .pi { display: flex; gap: 14px; padding: 15px 0; border-top: 1px solid var(--hair); align-items: baseline; }
-.planned .pi .idx { font-family: var(--mono); font-size: 11px; color: var(--faint); }
-.planned .pi .pt { font-size: 14px; color: var(--ink); }
-.planned .pi .pk { font-size: 11.5px; color: var(--muted); display: block; margin-top: 2px; }

@@ -1,0 +1,18 @@
+id: frontend-r2-remove-placeholders
+title: Remove the coming-to-this-section roadmap placeholders
+assumptions:
+  retire: []
+  create: []
+  reviewed:
+    - id: ui-live-data-binding
+      outcome: unchanged
+      reason: Deleting the static "Coming to this section" placeholder lists and their
+        CSS removes mockup artifacts only; the data binding and live render
+        paths are untouched.
+anchors: {}
+files:
+  - src/ui/sections.jsx
+  - src/ui/styles.css
+  - frontend-dashboard-progress.md
+applied:
+  applied_at: 2026-06-09T04:05:40.717Z
