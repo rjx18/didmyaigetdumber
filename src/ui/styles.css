@@ -175,7 +175,7 @@ body {
   cursor: pointer; position: relative; border-radius: 4px;
   transition: background 0.15s ease;
 }
-.kpi:first-child { border-left: 0; padding-left: 0; }
+.kpi:nth-child(4n + 1) { border-left: 0; padding-left: 0; }
 .kpi:hover { background: var(--raise); }
 .kpi:hover .k-more { opacity: 1; transform: none; }
 .k-more {

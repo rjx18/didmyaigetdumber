@@ -47,3 +47,17 @@ does **not** wait on them.
 | FE-D. Model toggle | `frontend-fe-d-model-toggle` | complete | phase commit | `models` selector; scope threads through hero/KPIs/sections; limits stay account-wide; label hygiene. |
 | FE-E. Granularity selector | `frontend-fe-e-granularity` | complete | phase commit | `1h·day·week·2w·month` detailed control via `granularity` URL param + reload; server re-buckets; 14-day KPIs/status unaffected; `1h` bounded server-side. |
 | FE-F. Gaps / prune / polish | `frontend-fe-f-polish` | complete | phase commit | Brand → didmyaigetdumber, relabel impossible per-session distributions and per-tool-latency (backlog #6) placeholders, README dashboard docs. |
+
+## Refinement re-plan (2026-06-09)
+
+Review fixes/redesigns from `tmp/plan/frontend-dashboard-refinement.md`: stray KPI
+separator, hard-refresh on granularity, confusing rate-limit "resets first", jagged
+charts, leftover "coming to this section" placeholders, and single-line "All models".
+
+| Phase | Harn plan | Status | Commit | Notes |
+| --- | --- | --- | --- | --- |
+| R1. Smooth charts + KPI separator | `frontend-r1-smooth-kpi` | complete | phase commit | Catmull-Rom smoothing in `pathFor`; first KPI of each row loses its left border. |
+| R2. Remove "coming to this section" | `frontend-r2-remove-placeholders` | planned | — | Delete roadmap placeholders + `.planned` styles. |
+| R3. Rate-limit card redesign | `frontend-r3-rate-limit-redesign` | planned | — | Lead with reset + used%; exhaustion is a conditional warning. |
+| R4. SPA data loading | `frontend-r4-spa-loading` | planned | — | Async re-fetch on granularity; no page reload. |
+| R5. Per-model multi-line for "All models" | `frontend-r5-per-model-multiline` | planned | — | One colored line per model + legend. |

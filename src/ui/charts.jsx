@@ -3,6 +3,27 @@ const { useState, useRef, useCallback } = React;
 
 // build an SVG path in a 1000 x H viewBox (preserveAspectRatio none keeps it responsive;
 // vector-effect:non-scaling-stroke keeps the line hairline-thin at any width)
+// Catmull-Rom spline → cubic bézier: a smooth curve through every plotted point
+// (tension 1/6). Endpoints are duplicated so the ends aren't clipped.
+function smoothPath(pts) {
+  const n = pts.length;
+  if (n === 0) return "";
+  if (n === 1) return `M${pts[0][0].toFixed(2)},${pts[0][1].toFixed(2)}`;
+  let d = `M${pts[0][0].toFixed(2)},${pts[0][1].toFixed(2)}`;
+  for (let i = 0; i < n - 1; i++) {
+    const p0 = pts[i - 1] || pts[i];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[i + 2] || p2;
+    const c1x = p1[0] + (p2[0] - p0[0]) / 6;
+    const c1y = p1[1] + (p2[1] - p0[1]) / 6;
+    const c2x = p2[0] - (p3[0] - p1[0]) / 6;
+    const c2y = p2[1] - (p3[1] - p1[1]) / 6;
+    d += ` C${c1x.toFixed(2)},${c1y.toFixed(2)} ${c2x.toFixed(2)},${c2y.toFixed(2)} ${p2[0].toFixed(2)},${p2[1].toFixed(2)}`;
+  }
+  return d;
+}
+
 function pathFor(values, H, padY) {
   const n = values.length;
   const min = Math.min(...values);
@@ -14,8 +35,7 @@ function pathFor(values, H, padY) {
     const y = padY + (1 - (v - min) / span) * innerH;
     return [x, y];
   });
-  const d = pts.map((p, i) => (i === 0 ? `M${p[0].toFixed(2)},${p[1].toFixed(2)}` : `L${p[0].toFixed(2)},${p[1].toFixed(2)}`)).join(" ");
-  return { d, pts, min, max, span };
+  return { d: smoothPath(pts), pts, min, max, span };
 }
 
 function pctX(i, n) { return (i / (n - 1)) * 100; }

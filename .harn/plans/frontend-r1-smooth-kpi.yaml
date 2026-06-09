@@ -1,0 +1,19 @@
+id: frontend-r1-smooth-kpi
+title: Smooth the line charts and fix the stray KPI separator
+assumptions:
+  retire: []
+  create: []
+  reviewed:
+    - id: ui-chart-hover-marker-alignment
+      outcome: unchanged
+      reason: pathFor now emits a smooth curve between the same plotted points; the
+        hover knob/guide still use the exact values[hi] y, so marker alignment
+        on the line is preserved. The change is confined to pathFor, outside the
+        chart-mini-line anchor.
+anchors: {}
+files:
+  - src/ui/charts.jsx
+  - src/ui/styles.css
+  - frontend-dashboard-progress.md
+applied:
+  applied_at: 2026-06-09T04:03:52.930Z
