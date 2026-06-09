@@ -1,0 +1,22 @@
+id: frontend-v3-replan-backlog
+title: Add backend backlog and re-plan frontend metrics-v3 consumption
+assumptions:
+  retire: []
+  create: []
+  reviewed:
+    - id: local-aggregate-privacy
+      outcome: unchanged
+      reason: BACKEND_BACKLOG.md and the progress re-plan are design docs only; they
+        add no code, counters, or transcripts and explicitly require every
+        backlog item to keep the aggregate-only, no-raw-content invariant.
+    - id: rolling-status-metrics-api
+      outcome: unchanged
+      reason: The re-plan documents how the frontend will consume the existing /api/ui
+        rolling/status/per-model/limits surface; it changes no server code or
+        API shape.
+anchors: {}
+files:
+  - BACKEND_BACKLOG.md
+  - frontend-dashboard-progress.md
+applied:
+  applied_at: 2026-06-09T03:05:16.373Z
