@@ -282,9 +282,11 @@ function SubNav({ active, onChange, granularity, onGranularity, loading }) {
 const MODEL_COLORS = ["#5b6b97", "#6b8a72", "#a0795c", "#9c5c7a", "#5c8a9c", "#8a7a5c", "#7a5c9c"];
 const modelLabel = (name) => { const i = name.lastIndexOf("/"); return i >= 0 ? name.slice(i + 1) : name; };
 
-function FeaturedChart({ chart, scope }) {
+function FeaturedChart({ chart, scope, breakdown }) {
   const models = (scope.models || []).filter((m) => m.id !== "<synthetic>" && m.tokens > 0 && scope.byModel[m.id]);
-  const multi = scope.model === "all" && models.length >= 2;
+  // "Overall" forces the single aggregate line (already usage-weighted server-side);
+  // "By model" (default for All models) overlays one line per model.
+  const multi = scope.model === "all" && breakdown !== "overall" && models.length >= 2;
   return (
     <div>
       <div className="chart-head">
@@ -442,7 +444,7 @@ function ChartCard({ spec, scope }) {
   );
 }
 
-function SectionDetail({ id, scope }) {
+function SectionDetail({ id, scope, breakdown }) {
   const cfg = SECTIONS[id];
   return (
     <div className="page-section">
@@ -450,7 +452,7 @@ function SectionDetail({ id, scope }) {
         <h2>{cfg.title}</h2>
         <p>{cfg.blurb}</p>
       </div>
-      {cfg.chart && <FeaturedChart chart={cfg.chart} scope={scope} />}
+      {cfg.chart && <FeaturedChart chart={cfg.chart} scope={scope} breakdown={breakdown} />}
       {cfg.limits && <RateLimits />}
       {cfg.charts && cfg.charts.length > 0 && (
         <div className="chart-grid two">

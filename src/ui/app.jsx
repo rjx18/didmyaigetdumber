@@ -80,10 +80,35 @@ function ModelSelector({ model, options, coverage, onChange }) {
 }
 // harn:end ui-model-selector
 
+// harn:assume ui-overall-by-model-toggle ref=ui-breakdown-toggle
+// Overall vs By-model breakdown for the All-models featured chart. "Overall" is the
+// single server-weighted aggregate; "By model" overlays one line per model.
+const BREAKDOWN_KEY = "ait_breakdown";
+
+function useBreakdown() {
+  const stored = localStorage.getItem(BREAKDOWN_KEY);
+  const [breakdown, set] = useState(stored === "overall" || stored === "bymodel" ? stored : "bymodel");
+  const setBreakdown = (v) => { localStorage.setItem(BREAKDOWN_KEY, v); set(v); };
+  return [breakdown, setBreakdown];
+}
+
+function BreakdownToggle({ value, onChange }) {
+  return (
+    <div className="seg" role="group" aria-label="Breakdown">
+      {[["bymodel", "By model"], ["overall", "Overall"]].map(([id, label]) => (
+        <button key={id} className={"seg-btn" + (value === id ? " on" : "")} aria-pressed={value === id}
+          onClick={() => value !== id && onChange(id)}>{label}</button>
+      ))}
+    </div>
+  );
+}
+// harn:end ui-overall-by-model-toggle
+
 function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
   const [section, setSection] = useState(() => localStorage.getItem("ait_section") || "friction");
   const [model, setModel, modelOpts] = useModel();
+  const [breakdown, setBreakdown] = useBreakdown();
   const [data, setData] = useState(window.DATA);
   const [gran, setGran] = useState((window.DATA.range && window.DATA.range.granularity) || "day");
   const [loading, setLoading] = useState(false);
@@ -142,6 +167,9 @@ function App() {
           {dataState === "ok" && (
             <ModelSelector model={model} options={modelOpts} coverage={scope && scope.coverage} onChange={setModel} />
           )}
+          {dataState === "ok" && model === "all" && (
+            <BreakdownToggle value={breakdown} onChange={setBreakdown} />
+          )}
           <button className="ghost-btn" onClick={() => setTweak("dark", !t.dark)}>
             {t.dark ? "◑ dark" : "◐ light"}
           </button>
@@ -157,7 +185,7 @@ function App() {
               <div ref={detailRef} className={"detail" + (loading ? " loading" : "")}>
                 <SubNav active={section} onChange={setSection}
                   granularity={gran} onGranularity={changeGranularity} loading={loading} />
-                <SectionDetail id={section} scope={scope} />
+                <SectionDetail id={section} scope={scope} breakdown={breakdown} />
               </div>
             </>
           ) : (

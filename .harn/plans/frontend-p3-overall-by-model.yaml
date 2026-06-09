@@ -1,0 +1,50 @@
+id: frontend-p3-overall-by-model
+title: Add an Overall vs By-model switch for the All-models view
+assumptions:
+  retire: []
+  create:
+    - id: ui-overall-by-model-toggle
+      title: Overall/By-model switch controls the featured chart
+      statement: When "All models" is selected the top bar shows a persisted
+        Overall/By-model segmented switch; "By model" (default) draws the
+        per-model overlay and "Overall" draws the single aggregate line, which
+        is already the correctly weighted figure (rates are usage-weighted
+        Σnumerator/Σdenominator and absolutes are summed, computed server-side);
+        the switch is hidden when a specific model is selected.
+      reason: Users need to choose between a per-model breakdown and one aggregate
+        number, and the aggregate must not be skewed by low-usage models.
+      depends_on:
+        - ui-model-selector
+        - ui-per-model-multiline
+  reviewed:
+    - id: ui-per-model-multiline
+      outcome: unchanged
+      reason: All-models still defaults to the per-model overlay; the featured chart
+        now also honors an explicit Overall choice to show the single aggregate
+        line.
+    - id: ui-section-chart-grid
+      outcome: unchanged
+      reason: SectionDetail only threads the breakdown choice down to the featured
+        chart; the section chart grid and dispatch are otherwise unchanged.
+anchors:
+  ui-per-model-multiline:
+    featured-multimodel:
+      action: change
+      reason: FeaturedChart gates the per-model overlay on the breakdown choice
+        (Overall shows the single aggregate line).
+  ui-section-chart-grid:
+    section-chart-grid:
+      action: change
+      reason: SectionDetail accepts and forwards the breakdown prop to FeaturedChart.
+  ui-overall-by-model-toggle:
+    ui-breakdown-toggle:
+      action: change
+      reason: Add the BreakdownToggle control, its persisted state, and thread the
+        choice into the featured chart.
+files:
+  - src/ui/app.jsx
+  - src/ui/sections.jsx
+  - src/ui/styles.css
+  - frontend-dashboard-progress.md
+applied:
+  applied_at: 2026-06-09T07:08:17.845Z

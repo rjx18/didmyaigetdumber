@@ -121,6 +121,14 @@ body {
 .model-select select:hover { color: var(--strong); border-color: var(--faint); }
 .model-cov { font-size: 11px; color: var(--muted); }
 
+.seg { display: inline-flex; gap: 2px; margin-right: 12px; border: 1px solid var(--hair); border-radius: 8px; padding: 2px; }
+.seg-btn {
+  appearance: none; border: 0; background: none; cursor: pointer; font-family: var(--mono);
+  font-size: 11px; color: var(--muted); padding: 5px 11px; border-radius: 6px; transition: color 0.15s, background 0.15s;
+}
+.seg-btn:hover { color: var(--ink); }
+.seg-btn.on { color: var(--strong); background: var(--raise); }
+
 /* ---------- generic structure ---------- */
 .page { padding-top: 40px; padding-bottom: 120px; }
 
