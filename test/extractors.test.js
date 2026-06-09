@@ -3,10 +3,11 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 
-const { extractClaudeMetrics } = require('../src/extractors/claude');
-const { extractCodexMetrics } = require('../src/extractors/codex');
+const { extractClaudeMetrics, extractClaudeMetricsByDate } = require('../src/extractors/claude');
+const { extractCodexMetrics, extractCodexMetricsByDate } = require('../src/extractors/codex');
 
-// harn:assume numeric-transcript-extractors ref=extractor-tests
+// harn:assume date-scoped-transcript-metrics ref=extractor-tests
+// harn:assume turn-model-attribution ref=extractor-tests
 test('extracts Codex numeric metrics without raw content fields', () => {
   const increment = extractCodexMetrics([
     {
@@ -67,6 +68,9 @@ test('extracts Codex numeric metrics without raw content fields', () => {
   assert.equal(increment.tokens.output, 30);
   assert.equal(increment.tokens.reasoning_output, 5);
   assert.equal(increment.model_tokens['gpt-5.4'].total, 150);
+  assert.equal(increment.by_model['gpt-5.4'].tokens.total, 150);
+  assert.equal(increment.by_model['gpt-5.4'].totals.turns, 1);
+  assert.equal(increment.by_model['gpt-5.4'].tool_calls_by_name.Bash, 1);
   assert.equal(increment.tool_calls_by_name.Bash, 1);
   assert.equal(increment.tool_output_chars.Bash, 'ignored output text'.length);
   assert.equal(increment.timings_ms.ttft_sum, 4000);
@@ -76,6 +80,7 @@ test('extracts Codex numeric metrics without raw content fields', () => {
   assert.equal(increment.totals.compactions, 1);
   assert.equal(increment.windows[0].kind, '5h');
   assert.equal(increment.windows[0].tokens_in_window, 150);
+  assert.equal(increment.windows[0].observed_tokens_delta, 150);
   assert.equal(serialized.includes('/private/project'), false);
   assert.equal(serialized.includes('ignored command text'), false);
   assert.equal(serialized.includes('ignored output text'), false);
@@ -133,6 +138,9 @@ test('extracts Claude numeric metrics without raw content fields', () => {
   assert.equal(increment.tokens.thinking_chars, 'private thinking text'.length);
   assert.equal(increment.tokens.text_chars, 'assistant private text'.length);
   assert.equal(increment.model_tokens['hf:moonshotai/Kimi-K2.6'].output, 40);
+  assert.equal(increment.by_model['hf:moonshotai/Kimi-K2.6'].tokens.output, 40);
+  assert.equal(increment.by_model['hf:moonshotai/Kimi-K2.6'].totals.turns, 1);
+  assert.equal(increment.by_model['hf:moonshotai/Kimi-K2.6'].tool_calls_by_name.Bash, 1);
   assert.equal(increment.tool_calls_by_name.Bash, 1);
   assert.equal(increment.tool_output_chars.Bash, 'ignored tool output'.length);
   assert.equal(increment.tool_failures_by_name.Bash, 1);
@@ -147,4 +155,49 @@ test('extracts Claude numeric metrics without raw content fields', () => {
   assert.equal(serialized.includes('ignored tool output'), false);
   assert.equal(serialized.includes('ignored summary text'), false);
 });
-// harn:end numeric-transcript-extractors
+
+test('partitions Codex metrics by record date and active turn model', () => {
+  const dayMap = extractCodexMetricsByDate([
+    { timestamp: '2026-06-08T23:59:00.000Z', type: 'turn_context', payload: { model: 'gpt-a' } },
+    { timestamp: '2026-06-08T23:59:10.000Z', type: 'event_msg', payload: { type: 'task_started' } },
+    { timestamp: '2026-06-09T00:00:10.000Z', type: 'event_msg', payload: { type: 'task_complete' } },
+    { timestamp: '2026-06-09T00:01:00.000Z', type: 'turn_context', payload: { model: 'gpt-b' } },
+    {
+      timestamp: '2026-06-09T00:01:10.000Z',
+      type: 'event_msg',
+      payload: {
+        type: 'token_count',
+        info: { last_token_usage: { input_tokens: 10, output_tokens: 5, total_tokens: 15 } },
+        rate_limits: { primary: { used_percent: 20, window_minutes: 300, resets_at: 1780901738 } },
+      },
+    },
+  ]);
+
+  assert.deepEqual([...dayMap.keys()], ['2026-06-09']);
+  const day = dayMap.get('2026-06-09');
+  assert.equal(day.by_model['gpt-a'].totals.turns, 1);
+  assert.equal(day.by_model['gpt-a'].timings_ms.turn_sum, 60000);
+  assert.equal(day.by_model['gpt-b'].tokens.total, 15);
+  assert.equal(day.windows[0].observed_tokens_delta, 15);
+});
+
+test('uses unknown model ownership when an isolated tail chunk has no context', () => {
+  const dayMap = extractClaudeMetricsByDate([
+    {
+      timestamp: '2026-06-09T01:00:00.000Z',
+      type: 'assistant',
+      message: {
+        role: 'assistant',
+        usage: { input_tokens: 10, output_tokens: 5 },
+        content: [{ type: 'tool_use', id: 'tool-1', name: 'Read' }],
+      },
+    },
+  ]);
+  const day = dayMap.get('2026-06-09');
+
+  assert.equal(day.by_model.unknown.tokens.total, 15);
+  assert.equal(day.by_model.unknown.tool_calls_by_name.Read, 1);
+  assert.equal(JSON.stringify(day).includes('tool-1'), false);
+});
+// harn:end turn-model-attribution
+// harn:end date-scoped-transcript-metrics

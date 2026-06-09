@@ -1,0 +1,14 @@
+id: date-scoped-transcript-metrics
+hash: a-0c0a1d3e9283
+title: Date-scoped transcript metrics
+state: active
+statement: Codex and Claude transcript extractors partition aggregate metric
+  increments by each metric-bearing record's local calendar date and emit
+  additive observed token deltas for every reported rate-limit window, so
+  cross-midnight sessions and locally summed window usage are represented
+  without raw transcript content.
+depends_on:
+  - daily-metrics-log-schema
+  - numeric-transcript-tail-privacy
+  - local-aggregate-privacy
+created_by: metrics-v3-phase-b2-extractors

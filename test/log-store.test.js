@@ -78,6 +78,7 @@ test('applies metrics increments without storing event text', () => {
     resets_at: 1780901738,
     used_percent: 73,
     tokens_in_window: 42000,
+    observed_tokens_delta: 130,
   });
 
   const log = applyIncrement(createDailyLog('2026-06-08'), increment, new Date('2026-06-08T03:00:00.000Z'));
@@ -95,6 +96,7 @@ test('applies metrics increments without storing event text', () => {
   assert.equal(second.timings_ms.turn_count, 2);
   assert.equal(second.tool_latency_ms_by_name.Bash, 1400);
   assert.equal(second.windows.length, 2);
+  assert.equal(second.windows[0].observed_tokens_delta, 130);
   assert.equal(JSON.stringify(second).includes('raw prompt'), false);
 });
 

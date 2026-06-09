@@ -1,0 +1,135 @@
+id: metrics-v3-phase-b2-extractors
+title: Add date-scoped model-aware transcript extraction
+assumptions:
+  retire:
+    - id: numeric-transcript-extractors
+      reason: Extractors now need date-scoped schema v3 output, per-turn model
+        attribution, and additive local window token deltas.
+  create:
+    - id: date-scoped-transcript-metrics
+      title: Date-scoped transcript metrics
+      statement: Codex and Claude transcript extractors partition aggregate metric
+        increments by each metric-bearing record's local calendar date and emit
+        additive observed token deltas for every reported rate-limit window, so
+        cross-midnight sessions and locally summed window usage are represented
+        without raw transcript content.
+      reason: Backfill, live tailing, and future hourly storage need record-time
+        partitioning and additive local window observations.
+      depends_on:
+        - daily-metrics-log-schema
+        - numeric-transcript-tail-privacy
+        - local-aggregate-privacy
+    - id: turn-model-attribution
+      title: Turn model attribution
+      statement: Transcript extractors attribute turn-owned token, tool, timing, turn,
+        and message counters to sanitized per-model slices using provider turn
+        context, and use the explicit `unknown` bucket when ownership cannot be
+        resolved, while preserving equivalent root attributable counters.
+      reason: Model-filtered reporting must use defensible transcript ownership rather
+        than inventing model ownership from incomplete hooks.
+      depends_on:
+        - per-model-daily-log-schema
+        - date-scoped-transcript-metrics
+        - local-aggregate-privacy
+  reviewed:
+    - id: per-model-daily-log-schema
+      outcome: unchanged
+      reason: Extractors populate the schema v3 by_model slices and preserve
+        global-only windows.
+    - id: daily-metrics-log-schema
+      outcome: unchanged
+      reason: Window samples remain append-only numeric aggregates and gain an
+        additive local token delta.
+    - id: numeric-transcript-tail-privacy
+      outcome: unchanged
+      reason: Date and model attribution use safe timestamps and labels without
+        persisting transcript content.
+    - id: local-aggregate-privacy
+      outcome: unchanged
+      reason: Extractor outputs remain aggregate-only.
+    - id: historical-backfill-numeric-metrics
+      outcome: unchanged
+      reason: Existing backfill callers continue using the compatibility aggregate
+        extractor until B3.
+    - id: live-hook-numeric-tail-integration
+      outcome: unchanged
+      reason: Existing live-tail callers continue using the compatibility aggregate
+        extractor until B4.
+    - id: transcript-offset-tail-store
+      outcome: unchanged
+      reason: Offset storage continues to return complete newly appended records;
+        extractor output changes do not alter cursor behavior.
+anchors:
+  numeric-transcript-extractors:
+    extractor-common:
+      action: remove
+      reason: Replace shared schema v2 extractor helpers with date/model-aware helpers.
+    codex-extractor:
+      action: remove
+      reason: Replace the single-increment Codex extractor contract.
+    claude-extractor:
+      action: remove
+      reason: Replace the single-increment Claude extractor contract.
+    extractor-tests:
+      action: remove
+      reason: Replace schema v2 extractor tests with date/model-aware tests.
+    progress-phase-3:
+      action: remove
+      reason: Historical metrics progress should reference the current extractor
+        contracts.
+  date-scoped-transcript-metrics:
+    extractor-common:
+      action: change
+      reason: Add date-map helpers and aggregate compatibility merging.
+    codex-extractor:
+      action: change
+      reason: Partition Codex metrics and observed token deltas by record date.
+    claude-extractor:
+      action: change
+      reason: Partition Claude metrics by record date.
+    extractor-tests:
+      action: change
+      reason: Verify midnight partitioning and additive token deltas.
+    progress-phase-b2:
+      action: change
+      reason: Track B2 completion.
+  turn-model-attribution:
+    extractor-common:
+      action: change
+      reason: Add root-and-model metric mutation helpers.
+    codex-extractor:
+      action: change
+      reason: Attribute Codex task metrics from turn_context model ownership.
+    claude-extractor:
+      action: change
+      reason: Attribute Claude response and associated tool metrics from assistant
+        message models.
+    extractor-tests:
+      action: change
+      reason: Verify model switches, unknown fallback, and root/model equality.
+  daily-metrics-log-schema:
+    store-schema:
+      action: change
+      reason: Normalize additive observed_tokens_delta in window samples.
+    store-tests:
+      action: change
+      reason: Verify observed token deltas survive normalization.
+  per-model-daily-log-schema:
+    store-model-schema:
+      action: change
+      reason: Export shared model slice mutation helpers for extractors.
+  historical-backfill-numeric-metrics:
+    progress-phase-3:
+      action: change
+      reason: Point historical progress at the replacement extractor contracts.
+files:
+  - src/log-store.js
+  - src/extractors/common.js
+  - src/extractors/codex.js
+  - src/extractors/claude.js
+  - test/log-store.test.js
+  - test/extractors.test.js
+  - metrics-hooks-backend-progress.md
+  - metrics-v3-progress.md
+applied:
+  applied_at: 2026-06-09T01:20:42.183Z

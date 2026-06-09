@@ -23,9 +23,9 @@
 <!-- harn:assume daily-metrics-log-schema ref=progress-phase-2 -->
 | 2. Schema v2 merge primitives | `metrics-phase-2-schema-v2` | complete | `d7de86d` | Add metric blocks and window sample storage. |
 <!-- harn:end daily-metrics-log-schema -->
-<!-- harn:assume numeric-transcript-extractors ref=progress-phase-3 -->
+<!-- harn:assume historical-backfill-numeric-metrics ref=progress-phase-3 -->
 | 3. Shared numeric extractors | `metrics-phase-3-numeric-extractors` | complete | `88deb65` | Parse Codex/Claude numeric fields without raw content. |
-<!-- harn:end numeric-transcript-extractors -->
+<!-- harn:end historical-backfill-numeric-metrics -->
 <!-- harn:assume historical-backfill-numeric-metrics ref=progress-phase-4 -->
 | 4. Backfill metrics | `metrics-phase-4-backfill-metrics` | complete | `3a541a0` | Populate metrics from historical transcripts. |
 <!-- harn:end historical-backfill-numeric-metrics -->

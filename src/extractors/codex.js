@@ -1,15 +1,18 @@
 'use strict';
 
-const { emptyIncrement } = require('../log-store');
 const {
   addDuration,
   addMap,
   addTokenUsage,
+  aggregateDayMap,
   durationMs,
+  incrementForDate,
   incrementToolCall,
   incrementToolFailure,
   incrementToolOutput,
   isoTime,
+  modelKey,
+  modelSlice,
   number,
   safeToolName,
 } = require('./common');
@@ -67,7 +70,7 @@ function windowKind(limit = {}) {
   return limit.kind || 'window';
 }
 
-function addRateLimitSamples(increment, payload, timestamp, tokenTotals) {
+function addRateLimitSamples(increment, payload, timestamp, observedTokensDelta) {
   const sampledAt = isoTime(timestamp);
   const limits = payload.rate_limits && typeof payload.rate_limits === 'object' ? payload.rate_limits : {};
   if (!sampledAt) {
@@ -83,29 +86,33 @@ function addRateLimitSamples(increment, payload, timestamp, tokenTotals) {
     if (!Number.isFinite(usedPercent) || usedPercent < 0 || !limit.resets_at) {
       continue;
     }
-    const resetKey = String(limit.resets_at);
-    const kind = windowKind(limit);
-    const mapKey = `${kind}:${resetKey}`;
     increment.windows.push({
-      kind,
+      kind: windowKind(limit),
       sampled_at: sampledAt,
       resets_at: limit.resets_at,
       used_percent: usedPercent,
-      tokens_in_window: tokenTotals.get(mapKey) || 0,
+      tokens_in_window: number(observedTokensDelta),
+      observed_tokens_delta: number(observedTokensDelta),
     });
   }
 }
 
-// harn:assume numeric-transcript-extractors ref=codex-extractor
-function extractCodexMetrics(records = []) {
-  const increment = emptyIncrement();
+function addToolLatency(increment, name, latency, model) {
+  addDuration(increment, 'tool_latency_sum', 'tool_latency_count', latency, model);
+  addMap(increment.tool_latency_ms_by_name, name, latency);
+  addMap(modelSlice(increment, model).tool_latency_ms_by_name, name, latency);
+}
+
+// harn:assume date-scoped-transcript-metrics ref=codex-extractor
+// harn:assume turn-model-attribution ref=codex-extractor
+function extractCodexMetricsByDate(records = [], options = {}) {
+  const dayMap = new Map();
   const state = {
-    currentModel: '',
-    callIdToTool: new Map(),
-    callIdToStartedAt: new Map(),
+    currentModel: 'unknown',
+    callById: new Map(),
     taskStartedAt: '',
+    taskModel: 'unknown',
     firstToolSeen: false,
-    windowTokenTotals: new Map(),
   };
 
   for (const record of records) {
@@ -116,109 +123,106 @@ function extractCodexMetrics(records = []) {
     const timestamp = timestampOf(record);
 
     if (record.type === 'turn_context' || payload.type === 'turn_context') {
-      state.currentModel = payload.model || record.model || state.currentModel;
+      state.currentModel = modelKey(payload.model || record.model || state.currentModel);
       continue;
     }
 
     if (record.type === 'event_msg' && payload.type === 'task_started') {
       state.taskStartedAt = timestamp;
+      state.taskModel = state.currentModel;
       state.firstToolSeen = false;
       continue;
     }
 
     if (record.type === 'event_msg' && payload.type === 'task_complete') {
+      const increment = incrementForDate(dayMap, timestamp, options.fallbackDate);
       const elapsed = durationMs(state.taskStartedAt, timestamp);
-      addDuration(increment, 'turn_sum', 'turn_count', elapsed);
-      addDuration(increment, 'generation_sum', 'generation_count', elapsed);
+      addDuration(increment, 'turn_sum', 'turn_count', elapsed, state.taskModel);
+      addDuration(increment, 'generation_sum', 'generation_count', elapsed, state.taskModel);
       if (elapsed) {
         increment.totals.turns += 1;
+        modelSlice(increment, state.taskModel).totals.turns += 1;
       }
       state.taskStartedAt = '';
+      state.taskModel = state.currentModel;
       state.firstToolSeen = false;
       continue;
     }
 
     if (record.type === 'event_msg' && (payload.type === 'context_compacted' || payload.type === 'compacted')) {
-      increment.totals.compactions += 1;
+      incrementForDate(dayMap, timestamp, options.fallbackDate).totals.compactions += 1;
       continue;
     }
 
     if (record.type === 'event_msg' && payload.type === 'token_count') {
+      const increment = incrementForDate(dayMap, timestamp, options.fallbackDate);
       const usage = usageFromTokenRecord(payload);
-      if (usage) {
-        const tokens = addTokenUsage(increment, usage, state.currentModel);
-        const limits = payload.rate_limits && typeof payload.rate_limits === 'object' ? payload.rate_limits : {};
-        for (const key of ['primary', 'secondary']) {
-          const limit = limits[key];
-          if (!limit || !limit.resets_at) {
-            continue;
-          }
-          const kind = windowKind(limit);
-          const mapKey = `${kind}:${limit.resets_at}`;
-          state.windowTokenTotals.set(mapKey, (state.windowTokenTotals.get(mapKey) || 0) + number(tokens.total));
-        }
-      }
-      addRateLimitSamples(increment, payload, timestamp, state.windowTokenTotals);
+      const tokens = usage ? addTokenUsage(increment, usage, state.currentModel) : { total: 0 };
+      addRateLimitSamples(increment, payload, timestamp, tokens.total);
       continue;
     }
 
     if (record.type === 'response_item' && isToolCall(payload)) {
+      const increment = incrementForDate(dayMap, timestamp, options.fallbackDate);
       const name = safeToolName(toolNameFromCall(payload));
-      incrementToolCall(increment, name);
+      const model = state.taskStartedAt ? state.taskModel : state.currentModel;
+      incrementToolCall(increment, name, model);
       const callId = payload.call_id || payload.id;
       if (callId) {
-        state.callIdToTool.set(callId, name);
-        state.callIdToStartedAt.set(callId, timestamp);
+        state.callById.set(callId, { name, timestamp, model });
       }
       if (state.taskStartedAt && !state.firstToolSeen) {
-        addDuration(increment, 'ttft_sum', 'ttft_count', durationMs(state.taskStartedAt, timestamp));
+        addDuration(increment, 'ttft_sum', 'ttft_count', durationMs(state.taskStartedAt, timestamp), model);
         state.firstToolSeen = true;
       }
       continue;
     }
 
     if (record.type === 'response_item' && payload.type === 'function_call_output') {
+      const increment = incrementForDate(dayMap, timestamp, options.fallbackDate);
       const callId = payload.call_id || payload.id;
-      const name = state.callIdToTool.get(callId) || 'tool';
-      incrementToolOutput(increment, name, outputValue(payload));
+      const call = state.callById.get(callId) || { name: 'tool', model: state.currentModel };
+      incrementToolOutput(increment, call.name, outputValue(payload), call.model);
       if (isFailure(payload)) {
-        incrementToolFailure(increment, name);
+        incrementToolFailure(increment, call.name, call.model);
       }
-      const startedAt = state.callIdToStartedAt.get(callId);
-      const latency = durationMs(startedAt, timestamp);
-      addDuration(increment, 'tool_latency_sum', 'tool_latency_count', latency);
-      addMap(increment.tool_latency_ms_by_name, name, latency);
+      addToolLatency(increment, call.name, durationMs(call.timestamp, timestamp), call.model);
       continue;
     }
 
     if (record.type === 'event_msg' && payload.type === 'mcp_tool_call_end') {
+      const increment = incrementForDate(dayMap, timestamp, options.fallbackDate);
       const name = safeToolName(payload.tool_name || payload.name || 'mcp_tool');
-      incrementToolOutput(increment, name, outputValue(payload));
+      const model = state.taskStartedAt ? state.taskModel : state.currentModel;
+      incrementToolOutput(increment, name, outputValue(payload), model);
       if (isFailure(payload)) {
-        incrementToolFailure(increment, name);
+        incrementToolFailure(increment, name, model);
       }
-      const latency = number(payload.duration_ms || payload.elapsed_ms);
-      addDuration(increment, 'tool_latency_sum', 'tool_latency_count', latency);
-      addMap(increment.tool_latency_ms_by_name, name, latency);
+      addToolLatency(increment, name, number(payload.duration_ms || payload.elapsed_ms), model);
       continue;
     }
 
     if (record.type === 'event_msg' && payload.type === 'patch_apply_end') {
+      const increment = incrementForDate(dayMap, timestamp, options.fallbackDate);
       const name = 'apply_patch';
+      const model = state.taskStartedAt ? state.taskModel : state.currentModel;
       if (isFailure(payload)) {
-        incrementToolFailure(increment, name);
+        incrementToolFailure(increment, name, model);
       }
-      const latency = number(payload.duration_ms || payload.elapsed_ms);
-      addDuration(increment, 'tool_latency_sum', 'tool_latency_count', latency);
-      addMap(increment.tool_latency_ms_by_name, name, latency);
-      continue;
+      addToolLatency(increment, name, number(payload.duration_ms || payload.elapsed_ms), model);
     }
   }
 
-  return increment;
+  return dayMap;
 }
-// harn:end numeric-transcript-extractors
+
+function extractCodexMetrics(records = [], options = {}) {
+  return aggregateDayMap(extractCodexMetricsByDate(records, options));
+}
+// harn:end turn-model-attribution
+// harn:end date-scoped-transcript-metrics
 
 module.exports = {
   extractCodexMetrics,
+  extractCodexMetricsByDate,
 };

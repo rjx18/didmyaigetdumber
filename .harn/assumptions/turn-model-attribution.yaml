@@ -1,0 +1,13 @@
+id: turn-model-attribution
+hash: a-64cbe8bcb14f
+title: Turn model attribution
+state: active
+statement: Transcript extractors attribute turn-owned token, tool, timing, turn,
+  and message counters to sanitized per-model slices using provider turn
+  context, and use the explicit `unknown` bucket when ownership cannot be
+  resolved, while preserving equivalent root attributable counters.
+depends_on:
+  - per-model-daily-log-schema
+  - date-scoped-transcript-metrics
+  - local-aggregate-privacy
+created_by: metrics-v3-phase-b2-extractors

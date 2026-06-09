@@ -1,6 +1,12 @@
 'use strict';
 
-const { TOKEN_KEYS } = require('../log-store');
+const {
+  TOKEN_KEYS,
+  emptyIncrement,
+  emptyModelSlice,
+  localDate,
+  mergeIncrementFields,
+} = require('../log-store');
 
 function number(value) {
   const parsed = Number(value);
@@ -30,6 +36,10 @@ function safeToolName(value, fallback = 'unknown') {
 
 function safeModelName(value) {
   return safeLabel(value, { allowSlash: true });
+}
+
+function modelKey(value) {
+  return safeModelName(value) || 'unknown';
 }
 
 function addMap(map, key, amount = 1, options = {}) {
@@ -66,18 +76,19 @@ function addTokens(target, tokens) {
   }
 }
 
+function modelSlice(increment, model) {
+  const key = modelKey(model);
+  increment.by_model[key] ||= emptyModelSlice();
+  return increment.by_model[key];
+}
+
 function addTokenUsage(increment, usage, model) {
   const tokens = tokenUsageFromProvider(usage);
   if (!TOKEN_KEYS.some((key) => tokens[key] > 0)) {
     return tokens;
   }
-
   addTokens(increment.tokens, tokens);
-  const safeModel = safeModelName(model);
-  if (safeModel) {
-    increment.model_tokens[safeModel] ||= Object.fromEntries(TOKEN_KEYS.map((key) => [key, 0]));
-    addTokens(increment.model_tokens[safeModel], tokens);
-  }
+  addTokens(modelSlice(increment, model).tokens, tokens);
   return tokens;
 }
 
@@ -86,15 +97,33 @@ function parseTime(value) {
     return null;
   }
   const parsed = new Date(value);
-  if (!Number.isFinite(parsed.getTime())) {
-    return null;
-  }
-  return parsed;
+  return Number.isFinite(parsed.getTime()) ? parsed : null;
 }
 
 function isoTime(value) {
   const parsed = parseTime(value);
   return parsed ? parsed.toISOString() : null;
+}
+
+function dateKey(value, fallback = '') {
+  const parsed = parseTime(value);
+  return parsed ? localDate(parsed) : fallback;
+}
+
+function incrementForDate(dayMap, timestamp, fallbackDate = '') {
+  const date = dateKey(timestamp, fallbackDate || localDate());
+  if (!dayMap.has(date)) {
+    dayMap.set(date, emptyIncrement());
+  }
+  return dayMap.get(date);
+}
+
+function aggregateDayMap(dayMap) {
+  const increment = emptyIncrement();
+  for (const daily of dayMap.values()) {
+    mergeIncrementFields(increment, daily);
+  }
+  return increment;
 }
 
 function durationMs(start, end) {
@@ -106,13 +135,16 @@ function durationMs(start, end) {
   return Math.max(0, endTime.getTime() - startTime.getTime());
 }
 
-function addDuration(increment, sumKey, countKey, ms) {
+function addDuration(increment, sumKey, countKey, ms, model) {
   const amount = number(ms);
   if (!amount) {
     return;
   }
   increment.timings_ms[sumKey] += amount;
   increment.timings_ms[countKey] += 1;
+  const timings = modelSlice(increment, model).timings_ms;
+  timings[sumKey] += amount;
+  timings[countKey] += 1;
 }
 
 function contentLength(value) {
@@ -141,30 +173,44 @@ function contentLength(value) {
   return String(value).length;
 }
 
-// harn:assume numeric-transcript-extractors ref=extractor-common
-function incrementToolCall(increment, name) {
-  addMap(increment.tool_calls_by_name, safeToolName(name));
+// harn:assume date-scoped-transcript-metrics ref=extractor-common
+// harn:assume turn-model-attribution ref=extractor-common
+function incrementToolCall(increment, name, model) {
+  const tool = safeToolName(name);
+  addMap(increment.tool_calls_by_name, tool);
+  addMap(modelSlice(increment, model).tool_calls_by_name, tool);
 }
 
-function incrementToolOutput(increment, name, output) {
-  addMap(increment.tool_output_chars, safeToolName(name), contentLength(output));
+function incrementToolOutput(increment, name, output, model) {
+  const tool = safeToolName(name);
+  const length = contentLength(output);
+  addMap(increment.tool_output_chars, tool, length);
+  addMap(modelSlice(increment, model).tool_output_chars, tool, length);
 }
 
-function incrementToolFailure(increment, name) {
-  addMap(increment.tool_failures_by_name, safeToolName(name));
+function incrementToolFailure(increment, name, model) {
+  const tool = safeToolName(name);
+  addMap(increment.tool_failures_by_name, tool);
+  addMap(modelSlice(increment, model).tool_failures_by_name, tool);
 }
-// harn:end numeric-transcript-extractors
+// harn:end turn-model-attribution
+// harn:end date-scoped-transcript-metrics
 
 module.exports = {
   addDuration,
   addMap,
   addTokenUsage,
+  aggregateDayMap,
   contentLength,
+  dateKey,
   durationMs,
+  incrementForDate,
   incrementToolCall,
   incrementToolFailure,
   incrementToolOutput,
   isoTime,
+  modelKey,
+  modelSlice,
   number,
   safeModelName,
   safeToolName,

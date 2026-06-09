@@ -14,7 +14,9 @@
 <!-- harn:assume per-model-daily-log-schema ref=progress-phase-b1 -->
 | B1. Attribution contract + schema v3 primitives | `metrics-v3-phase-b1-schema` | complete | phase commit | Added `by_model`, compatibility projection, and schema tests. |
 <!-- harn:end per-model-daily-log-schema -->
-| B2. Date-scoped, model-aware extraction | `metrics-v3-phase-b2-extractors` | planned | — | |
+<!-- harn:assume date-scoped-transcript-metrics ref=progress-phase-b2 -->
+| B2. Date-scoped, model-aware extraction | `metrics-v3-phase-b2-extractors` | complete | phase commit | Partitioned metrics by record date and attributed turn-owned metrics. |
+<!-- harn:end date-scoped-transcript-metrics -->
 | B3. Historical backfill integration | `metrics-v3-phase-b3-backfill` | planned | — | |
 | B4. Live-tail integration and reconciliation | `metrics-v3-phase-b4-live-tail` | planned | — | |
 | B5. Aggregation core + rate-limit correction | `metrics-v3-phase-b5-aggregation` | planned | — | |

@@ -255,6 +255,7 @@ function normalizeWindowSample(input) {
     resets_at: resetsAt,
     used_percent: usedPercent,
     tokens_in_window: numeric(input.tokens_in_window),
+    observed_tokens_delta: numeric(input.observed_tokens_delta),
   };
 }
 
@@ -586,6 +587,7 @@ module.exports = {
   locksDir,
   logsDir,
   mergeIncrementFields,
+  mergeModelSlice,
   normalizeByModel,
   normalizeDailyLog,
   normalizeModelSlice,
