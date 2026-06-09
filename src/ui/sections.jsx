@@ -12,6 +12,7 @@ function buildScope(data, model) {
   const shared = {
     days: data.days, range: data.range || {}, limits: data.limits || {},
     models: data.models || [], byModel: data.byModel || {},
+    account: data.account || { series: {} },
   };
   const m = model && model !== "all" ? (data.byModel || {})[model] : null;
   if (m) {
@@ -151,34 +152,87 @@ function HeadlineMetrics({ scope, onPick }) {
 }
 
 /* ---------------- sections ---------------- */
+// Palette for stacked/multi-metric chart layers (distinct, theme-friendly).
+const C = ["#5b6b97", "#6b8a72", "#a0795c", "#9c5c7a", "#5c8a9c", "#8a7a5c"];
+
 const SECTIONS = {
   friction: {
     title: "Friction", blurb: "How often turns go sideways — interrupts, retries, corrections — split by who caused it and how severe.",
     chart: { title: "Friction rate", sub: "total · % of turns with a friction signal", pick: (s) => s.friction.total, fmt: "pct1", color: "accent", goodDir: "down", now: (s) => H.last(s.friction.total).toFixed(1) + "%" },
+    charts: [
+      { kind: "stack", title: "Friction by severity", sub: "1pt vs 2pt tiers · % of messages", fmt: "pct1",
+        layers: [{ name: "1pt", color: C[0], pick: (s) => s.friction.t1 }, { name: "2pt", color: C[3], pick: (s) => s.friction.t2 }] },
+      { kind: "multiline", title: "User vs assistant", sub: "friction rate by source", fmt: "pct1",
+        lines: [{ name: "User", color: C[0], pick: (s) => s.friction.user }, { name: "Assistant", color: C[1], pick: (s) => s.friction.assistant }] },
+      { kind: "line", title: "Interrupts / day", sub: "runtime interrupts", pick: (s) => s.activity.interrupts, fmt: "int", color: "ink" },
+    ],
   },
   activity: {
     title: "Activity", blurb: "Raw throughput of the system: how much conversation is happening and how it’s shaped.",
     chart: { title: "Sessions per day", sub: "distinct sessions", pick: (s) => s.activity.sessions, fmt: "int", color: "ink", goodDir: null, now: (s) => FMT.int(H.last(s.activity.sessions)) },
+    charts: [
+      { kind: "multiline", title: "Turns vs messages", sub: "per day", fmt: "int",
+        lines: [{ name: "Turns", color: C[0], pick: (s) => s.activity.turns }, { name: "Messages", color: C[1], pick: (s) => s.activity.messages }] },
+      { kind: "stack", title: "User vs assistant messages", sub: "per day", fmt: "int",
+        layers: [{ name: "User", color: C[0], pick: (s) => s.activity.userMsgs }, { name: "Assistant", color: C[1], pick: (s) => s.activity.asstMsgs }] },
+      { kind: "line", title: "Compactions / day", sub: "context compactions", pick: (s) => s.activity.compactions, fmt: "int", color: "ink" },
+      { kind: "multiline", title: "Permissions", sub: "requested vs denied · account-wide", fmt: "int",
+        lines: [{ name: "Requested", color: C[0], pick: (s, sc) => sc.account.series.permissionRequests || [] }, { name: "Denied", color: C[3], pick: (s, sc) => sc.account.series.permissionDenied || [] }] },
+    ],
   },
   tokens: {
     title: "Tokens", blurb: "Where the tokens go — by type, by model, and per session.",
     chart: { title: "Tokens per day", sub: "all token types", pick: (s) => s.tokens.total, fmt: "tok", color: "ink", goodDir: null, now: (s) => FMT.tok(H.last(s.tokens.total)) },
+    charts: [
+      { kind: "stack", title: "Token composition", sub: "input · output · cache · reasoning", fmt: "tok",
+        layers: [
+          { name: "Input", color: C[0], pick: (s) => s.tokens.comp.input },
+          { name: "Output", color: C[1], pick: (s) => s.tokens.comp.output },
+          { name: "Cache read", color: C[2], pick: (s) => s.tokens.comp.cacheRead },
+          { name: "Cache create", color: C[3], pick: (s) => s.tokens.comp.cacheCreate },
+          { name: "Reasoning", color: C[4], pick: (s) => s.tokens.comp.reasoning },
+        ] },
+      { kind: "bars", bars: "modelTokens", title: "Per-model token mix", sub: "total tokens by model · range" },
+      { kind: "line", title: "Tokens / session", sub: "mean per session", pick: (s) => s.tokens.perSession, fmt: "tok", color: "ink" },
+    ],
   },
   cache: {
     title: "Cache", blurb: "Cache economics — how much we’re reading back vs paying to create.",
     chart: { title: "Cache hit ratio", sub: "cache-read ÷ (read + creation + fresh input)", pick: (s) => s.cache.hit, fmt: "ratio", color: "ink", goodDir: "up", now: (s) => (H.last(s.cache.hit) * 100).toFixed(1) + "%" },
+    charts: [
+      { kind: "stack", title: "Read vs creation vs fresh input", sub: "cache token types per day", fmt: "tok",
+        layers: [
+          { name: "Cache read", color: C[1], pick: (s) => s.tokens.comp.cacheRead },
+          { name: "Cache create", color: C[2], pick: (s) => s.tokens.comp.cacheCreate },
+          { name: "Fresh input", color: C[0], pick: (s) => s.tokens.comp.input },
+        ] },
+    ],
   },
   reasoning: {
     title: "Reasoning", blurb: "Thinking budget — exact for Codex, estimated for Claude.",
     chart: { title: "Reasoning-token share (Codex)", sub: "reasoning ÷ output tokens · exact", pick: (s) => s.reasoning.codex, fmt: "ratio", color: "accent", goodDir: null, now: (s) => (H.last(s.reasoning.codex) * 100).toFixed(1) + "%" },
+    charts: [
+      { kind: "multiline", title: "Codex reasoning vs Claude thinking", sub: "share · exact vs estimated", fmt: "ratio",
+        lines: [{ name: "Codex reasoning", color: C[0], pick: (s) => s.reasoning.codex }, { name: "Claude thinking", color: C[3], pick: (s) => s.reasoning.claude }] },
+    ],
   },
   tools: {
     title: "Tools", blurb: "What the assistant reaches for, how much it produces, and where it fails.",
-    bars: true,
+    charts: [
+      { kind: "bars", bars: "toolMix", wide: true, title: "Tool call mix", sub: "share of all tool invocations" },
+      { kind: "bars", bars: "toolErrors", title: "Error rate by tool", sub: "failures ÷ calls" },
+      { kind: "bars", bars: "toolOutput", title: "Output chars by tool", sub: "bytes produced" },
+      { kind: "line", title: "Tools / message", sub: "avg tool calls per message", pick: (s) => s.tools.perMsg, fmt: "num2", color: "ink" },
+    ],
   },
   timing: {
     title: "Timing", blurb: "Latency from the user’s seat — how fast it starts, runs, and finishes.",
     chart: { title: "Avg turn duration", sub: "wall-clock seconds per turn", pick: (s) => s.timing.turnDuration, fmt: "sec", color: "ink", goodDir: "down", now: (s) => H.last(s.timing.turnDuration).toFixed(1) + "s" },
+    charts: [
+      { kind: "line", title: "Time to first token", sub: "ms", pick: (s) => s.timing.ttft, fmt: "ms", color: "accent", goodDir: "down" },
+      { kind: "line", title: "Output throughput", sub: "tokens / sec", pick: (s) => s.timing.throughput, fmt: (v) => v.toFixed(0) + " tok/s", color: "ink", goodDir: "up" },
+      { kind: "line", title: "Avg tool latency", sub: "ms", pick: (s) => s.timing.toolLatency, fmt: "ms", color: "ink", goodDir: "down" },
+    ],
   },
   limits: {
     title: "Rate limits", blurb: "Codex 5-hour and weekly windows — estimated time to exhaustion at the current burn, and time to reset.",
@@ -219,26 +273,6 @@ function SubNav({ active, onChange, granularity, onGranularity, loading }) {
         ))}
       </nav>
       <GranularityControl current={granularity} loading={loading} onChange={onGranularity} />
-    </div>
-  );
-}
-
-function ToolBars({ scope }) {
-  const mix = scope.toolsMix || [];
-  const totalCalls = mix.reduce((a, t) => a + t.count, 0);
-  const rows = [...mix].sort((a, b) => b.count - a.count).map((t) => ({
-    name: t.name, value: t.count, label: totalCalls ? (t.count / totalCalls * 100).toFixed(1) + "%" : "0%",
-  }));
-  return (
-    <div>
-      <div className="chart-head">
-        <div>
-          <div className="chart-title">Tool call mix</div>
-          <div className="chart-sub">share of all tool invocations</div>
-        </div>
-        <div className="chart-now num">{FMT.int(totalCalls)}</div>
-      </div>
-      <HBars rows={rows} fmt="int" />
     </div>
   );
 }
@@ -356,6 +390,58 @@ function RateLimits() {
 }
 // harn:end ui-rate-limit-window-cards
 
+// harn:assume ui-section-chart-grid ref=section-chart-grid
+// Categorical bar charts (tool/model breakdowns) for a section, from the active scope.
+function BarsCard({ spec, scope }) {
+  const mix = scope.toolsMix || [];
+  if (spec.bars === "toolErrors") {
+    const rows = mix.filter((t) => t.count > 0).sort((a, b) => b.errRate - a.errRate).slice(0, 10)
+      .map((t) => ({ name: t.name, value: t.errRate, label: (t.errRate * 100).toFixed(1) + "%" }));
+    const max = Math.max(0.01, ...rows.map((r) => r.value));
+    return <HBars rows={rows} max={max} fmt="ratio" colorFor={(r) => (r.value > 0.09 ? "#a05c5c" : undefined)} />;
+  }
+  if (spec.bars === "toolOutput") {
+    const rows = [...mix].sort((a, b) => b.outChars - a.outChars).slice(0, 10)
+      .map((t) => ({ name: t.name, value: t.outChars, label: FMT.tok(t.outChars) }));
+    return <HBars rows={rows} fmt="tok" />;
+  }
+  if (spec.bars === "modelTokens") {
+    const rows = (scope.models || []).filter((m) => m.id !== "<synthetic>" && m.tokens > 0)
+      .map((m) => ({ name: modelLabel(m.name), value: m.tokens, label: FMT.tok(m.tokens) }));
+    return <HBars rows={rows} fmt="tok" />;
+  }
+  const total = mix.reduce((a, t) => a + t.count, 0);
+  const rows = [...mix].sort((a, b) => b.count - a.count).slice(0, 12)
+    .map((t) => ({ name: t.name, value: t.count, label: total ? (t.count / total * 100).toFixed(1) + "%" : "0%" }));
+  return <HBars rows={rows} fmt="int" />;
+}
+
+// One secondary chart, dispatched by kind, driven by the active model scope.
+function ChartCard({ spec, scope }) {
+  const s = scope.series;
+  let body = null;
+  if (spec.kind === "line") {
+    body = <MiniLine values={spec.pick(s, scope)} dates={scope.days} fmt={spec.fmt} color={spec.color || "ink"} height={150} goodDir={spec.goodDir || null} />;
+  } else if (spec.kind === "multiline") {
+    body = <MultiLine lines={spec.lines.map((l) => ({ name: l.name, color: l.color, values: l.pick(s, scope) }))} dates={scope.days} fmt={spec.fmt} height={170} />;
+  } else if (spec.kind === "stack") {
+    body = <StackedArea series={spec.layers.map((l) => ({ name: l.name, color: l.color, values: l.pick(s, scope) }))} dates={scope.days} fmt={spec.fmt} height={170} />;
+  } else if (spec.kind === "bars") {
+    body = <BarsCard spec={spec} scope={scope} />;
+  }
+  return (
+    <div className={"chart-card" + (spec.wide ? " wide" : "")}>
+      <div className="chart-head">
+        <div>
+          <div className="chart-title">{spec.title}</div>
+          <div className="chart-sub">{spec.sub}</div>
+        </div>
+      </div>
+      {body}
+    </div>
+  );
+}
+
 function SectionDetail({ id, scope }) {
   const cfg = SECTIONS[id];
   return (
@@ -366,9 +452,14 @@ function SectionDetail({ id, scope }) {
       </div>
       {cfg.chart && <FeaturedChart chart={cfg.chart} scope={scope} />}
       {cfg.limits && <RateLimits />}
-      {cfg.bars && <ToolBars scope={scope} />}
+      {cfg.charts && cfg.charts.length > 0 && (
+        <div className="chart-grid two">
+          {cfg.charts.map((spec, i) => <ChartCard key={i} spec={spec} scope={scope} />)}
+        </div>
+      )}
     </div>
   );
 }
+// harn:end ui-section-chart-grid
 
 Object.assign(window, { Hero, HeadlineMetrics, SubNav, SectionDetail, buildScope });

@@ -230,6 +230,15 @@ body {
 .lim-row .num { color: var(--strong); }
 @media (max-width: 720px) { .lim-grid { grid-template-columns: 1fr; } }
 
+/* ---------- section chart grid ---------- */
+.chart-grid { margin-top: 40px; }
+.chart-card { min-width: 0; }
+.chart-card.wide { grid-column: 1 / -1; }
+
+/* stacked-area bands */
+.mini .area { stroke: none; fill-opacity: 0.82; }
+.tip .tip-total { border-top: 1px solid oklch(1 0 0 / 0.18); margin-top: 6px; padding-top: 5px; }
+
 /* ---------- per-model multi-line ---------- */
 .legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 14px; }
 .legend .leg { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: var(--muted); }

@@ -70,6 +70,6 @@ smoothing, 2w default, Overall/By-model switch, and a remaining-led rate-limit c
 | Phase | Harn plan | Status | Commit | Notes |
 | --- | --- | --- | --- | --- |
 | P1. Monotone smoothing + 2w default | `frontend-p1-monotone-2w` | complete | phase commit | Fritsch-Carlson monotone spline (no overshoot); default granularity 2w. |
-| P2. Stacked-area + multi-chart tabs | `frontend-p2-richer-sections` | planned | — | New StackedArea primitive; each tab renders its full chart inventory. |
+| P2. Stacked-area + multi-chart tabs | `frontend-p2-richer-sections` | complete | phase commit | New StackedArea primitive; each tab renders its full chart inventory. |
 | P3. Overall / By-model switch | `frontend-p3-overall-by-model` | planned | — | Segmented toggle; aggregate vs per-model overlay. |
 | P4. Rate-limit remaining-led cards | `frontend-p4-rate-limit-remaining` | planned | — | %-remaining headline, exhaustion alert, used-up → reset. |

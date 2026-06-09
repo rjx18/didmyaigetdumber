@@ -1,0 +1,51 @@
+id: frontend-p2-richer-sections
+title: Render the full chart inventory in every section
+assumptions:
+  retire: []
+  create:
+    - id: ui-section-chart-grid
+      title: Each section renders its full chart inventory
+      statement: Every detailed section renders, below its featured chart, a
+        responsive grid of all the charts its data supports — line, multi-metric
+        multi-line, stacked-area, and categorical bars — each driven by the
+        active model scope (account-wide series like permission counts
+        excepted); the charts are declared per section and dispatched by a
+        ChartCard on chart kind, with a StackedArea primitive that stacks
+        smoothed bands on a shared axis.
+      reason: Tabs exist to hold more than one chart; the data already supports
+        several views per section that the single-chart layout hid.
+      depends_on:
+        - ui-live-data-binding
+        - ui-model-selector
+        - ui-per-model-multiline
+  reviewed:
+    - id: ui-model-selector
+      outcome: unchanged
+      reason: buildScope still scopes by model; it additionally carries the
+        account-wide account series so the activity permission charts can read
+        it.
+    - id: ui-per-model-multiline
+      outcome: unchanged
+      reason: The featured chart (MultiLine for All-models) is unchanged; this phase
+        only adds secondary charts beneath it.
+anchors:
+  ui-section-chart-grid:
+    chart-stacked-area:
+      action: change
+      reason: Add the StackedArea chart primitive (smoothed stacked bands, legend,
+        hover totals).
+    section-chart-grid:
+      action: change
+      reason: Add ChartCard/BarsCard dispatch and render the per-section chart grid in
+        SectionDetail.
+  ui-model-selector:
+    ui-model-scope:
+      action: change
+      reason: Carry the account-wide account series on the scope.
+files:
+  - src/ui/charts.jsx
+  - src/ui/sections.jsx
+  - src/ui/styles.css
+  - frontend-dashboard-progress.md
+applied:
+  applied_at: 2026-06-09T07:04:26.042Z

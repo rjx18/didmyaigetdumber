@@ -1,0 +1,15 @@
+id: ui-section-chart-grid
+hash: a-a5e8e771f52a
+title: Each section renders its full chart inventory
+state: active
+statement: Every detailed section renders, below its featured chart, a
+  responsive grid of all the charts its data supports — line, multi-metric
+  multi-line, stacked-area, and categorical bars — each driven by the active
+  model scope (account-wide series like permission counts excepted); the charts
+  are declared per section and dispatched by a ChartCard on chart kind, with a
+  StackedArea primitive that stacks smoothed bands on a shared axis.
+depends_on:
+  - ui-live-data-binding
+  - ui-model-selector
+  - ui-per-model-multiline
+created_by: frontend-p2-richer-sections

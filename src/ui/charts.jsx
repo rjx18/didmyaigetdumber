@@ -222,6 +222,90 @@ function MultiLine({ lines, dates, fmt = "num2", height = 220, padY = 14 }) {
 }
 // harn:end ui-per-model-multiline
 
+// harn:assume ui-section-chart-grid ref=chart-stacked-area
+// StackedArea: smoothed stacked bands on a shared axis (sum of layers = the top).
+// Legend + hover guide listing each layer's value and the total at the point.
+function StackedArea({ series, dates, fmt = "tok", height = 170, padY = 14 }) {
+  const [hi, setHi] = useState(null);
+  const ref = useRef(null);
+  const fmtFn = typeof fmt === "function" ? fmt : FMT[fmt];
+  const layers = (series || []).filter((l) => l.values && l.values.length);
+  const n = layers[0] ? layers[0].values.length : 0;
+  const val = (l, i) => Math.max(0, l.values[i] || 0);
+
+  const totals = [];
+  let maxTotal = 0;
+  for (let i = 0; i < n; i++) {
+    let acc = 0;
+    for (const l of layers) acc += val(l, i);
+    totals[i] = acc;
+    if (acc > maxTotal) maxTotal = acc;
+  }
+  const span = maxTotal || 1;
+  const innerH = height - padY * 2;
+  const yFor = (v) => padY + (1 - v / span) * innerH;
+  const xAt = (i) => (i / (n - 1)) * 1000;
+
+  // bottom-up stack; each band is top boundary (forward) + bottom boundary (reversed)
+  const bottoms = new Array(n).fill(0);
+  const bands = layers.map((l) => {
+    const top = [], bot = [];
+    for (let i = 0; i < n; i++) {
+      const b = bottoms[i];
+      const t = b + val(l, i);
+      bot.push([xAt(i), yFor(b)]);
+      top.push([xAt(i), yFor(t)]);
+      bottoms[i] = t;
+    }
+    const topPath = smoothPath(top);
+    const botPath = smoothPath(bot.slice().reverse()).replace(/^M/, "L");
+    return { d: topPath + " " + botPath + " Z", color: l.color, name: l.name };
+  });
+
+  const onMove = useCallback((e) => {
+    if (!ref.current || n === 0) return;
+    const r = ref.current.getBoundingClientRect();
+    const frac = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+    setHi(Math.round(frac * (n - 1)));
+  }, [n]);
+
+  const xPct = hi != null ? (hi / (n - 1)) * 100 : 0;
+  const tipLeft = Math.min(88, Math.max(8, xPct));
+
+  return (
+    <div>
+      <div className="legend">
+        {layers.map((l) => (
+          <span className="leg" key={l.name}><span className="leg-dot" style={{ background: l.color }} />{l.name}</span>
+        ))}
+      </div>
+      <div className="mini" style={{ height }} ref={ref} onMouseMove={onMove} onMouseLeave={() => setHi(null)}>
+        <svg viewBox={`0 0 1000 ${height}`} preserveAspectRatio="none" aria-hidden="true">
+          <line className="axis" x1="0" y1={height - 0.5} x2="1000" y2={height - 0.5} />
+          {bands.map((b) => <path key={b.name} className="area" style={{ fill: b.color }} d={b.d} />)}
+        </svg>
+        {hi != null && (
+          <>
+            <div className="guide" style={{ left: xPct + "%" }} />
+            <div className="tip multi" style={{ left: tipLeft + "%", top: 0 }}>
+              <div className="tip-date">{dates ? fmtDate(dates[hi]) : "#" + hi}</div>
+              {layers.map((l) => (
+                <div className="tip-row" key={l.name}>
+                  <span className="leg-dot" style={{ background: l.color }} />
+                  <span className="tip-name">{l.name}</span>
+                  <span className="tip-val num">{fmtFn(val(l, hi))}</span>
+                </div>
+              ))}
+              <div className="tip-row tip-total"><span className="tip-name">Total</span><span className="tip-val num">{fmtFn(totals[hi])}</span></div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+// harn:end ui-section-chart-grid
+
 // Sparkline: tiny, no axis, hover knob only (used in KPI strip)
 function Spark({ values, color = "ghost", height = 30 }) {
   const { d } = pathFor(values, height, 4);
@@ -269,4 +353,4 @@ function HBars({ rows, max, fmt = "int", colorFor }) {
   );
 }
 
-Object.assign(window, { MiniLine, MultiLine, Spark, Delta, HBars, FMT, fmtDate });
+Object.assign(window, { MiniLine, MultiLine, StackedArea, Spark, Delta, HBars, FMT, fmtDate });
