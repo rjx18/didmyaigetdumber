@@ -106,7 +106,10 @@ function BreakdownToggle({ value, onChange }) {
 
 function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
-  const [section, setSection] = useState(() => localStorage.getItem("ait_section") || "friction");
+  const [section, setSection] = useState(() => {
+    const stored = localStorage.getItem("ait_section");
+    return stored && window.SECTION_IDS && window.SECTION_IDS.indexOf(stored) >= 0 ? stored : "friction";
+  });
   const [model, setModel, modelOpts] = useModel();
   const [breakdown, setBreakdown] = useBreakdown();
   const [data, setData] = useState(window.DATA);

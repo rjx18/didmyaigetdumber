@@ -1,0 +1,32 @@
+id: frontend-consolidation-p1-sections
+title: Consolidate the dashboard into four sections
+assumptions:
+  retire: []
+  create: []
+  reviewed:
+    - id: ui-section-chart-grid
+      outcome: unchanged
+      reason: SectionDetail still renders the featured chart, optional rate-limit
+        cards, and the per-section chart grid; only the section set is regrouped
+        into four tabs and the rate-limit cards now render before the featured
+        chart.
+    - id: ui-rolling-status-rendering
+      outcome: unchanged
+      reason: The KPI cards still read all.rolling; only each KPI's section-routing
+        target is renamed to the new combined section id.
+anchors:
+  ui-section-chart-grid:
+    section-chart-grid:
+      action: change
+      reason: Render rate-limit cards above the featured chart so "Activity and
+        Limits" leads with limits.
+  ui-rolling-status-rendering:
+    ui-rolling-kpis:
+      action: change
+      reason: Repoint each KPI's section target to the four combined section ids.
+files:
+  - src/ui/sections.jsx
+  - src/ui/app.jsx
+  - frontend-consolidation-progress.md
+applied:
+  applied_at: 2026-06-09T10:12:07.230Z

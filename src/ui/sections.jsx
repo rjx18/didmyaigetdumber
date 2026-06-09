@@ -96,13 +96,13 @@ function Hero({ scope }) {
 // `fmt` expects (rolling friction/timing are ratios/ms).
 const KPI_LIST = [
   { label: "Friction rate", pick: (s) => s.friction.total, roll: "friction", rollFx: (v) => v * 100, fmt: "pct1", goodDir: "down", section: "friction" },
-  { label: "Tokens / day", pick: (s) => s.tokens.total, roll: "tokensPerDay", fmt: "tok", goodDir: null, section: "tokens" },
-  { label: "Cache hit", pick: (s) => s.cache.hit, roll: "cacheHit", fmt: "ratio", goodDir: "up", section: "cache" },
-  { label: "Tools / msg", pick: (s) => s.tools.perMsg, roll: "toolsPerMessage", fmt: "num2", goodDir: null, section: "tools" },
-  { label: "Avg turn", pick: (s) => s.timing.turnDuration, roll: "avgTurnMs", rollFx: (v) => v / 1000, fmt: "sec", goodDir: "down", section: "timing" },
-  { label: "Throughput", pick: (s) => s.timing.throughput, roll: "throughput", fmt: (v) => v.toFixed(0), unit: " tok/s", goodDir: "up", section: "timing" },
-  { label: "Time to first token", pick: (s) => s.timing.ttft, roll: "avgTtftMs", fmt: "ms", goodDir: "down", section: "timing" },
-  { label: "Reasoning share", pick: (s) => s.reasoning.codex, roll: "reasoningShare", fmt: "ratio", goodDir: null, section: "reasoning" },
+  { label: "Tokens / day", pick: (s) => s.tokens.total, roll: "tokensPerDay", fmt: "tok", goodDir: null, section: "tokensCache" },
+  { label: "Cache hit", pick: (s) => s.cache.hit, roll: "cacheHit", fmt: "ratio", goodDir: "up", section: "tokensCache" },
+  { label: "Tools / msg", pick: (s) => s.tools.perMsg, roll: "toolsPerMessage", fmt: "num2", goodDir: null, section: "latencyTools" },
+  { label: "Avg turn", pick: (s) => s.timing.turnDuration, roll: "avgTurnMs", rollFx: (v) => v / 1000, fmt: "sec", goodDir: "down", section: "latencyTools" },
+  { label: "Throughput", pick: (s) => s.timing.throughput, roll: "throughput", fmt: (v) => v.toFixed(0), unit: " tok/s", goodDir: "up", section: "latencyTools" },
+  { label: "Time to first token", pick: (s) => s.timing.ttft, roll: "avgTtftMs", fmt: "ms", goodDir: "down", section: "latencyTools" },
+  { label: "Reasoning share", pick: (s) => s.reasoning.codex, roll: "reasoningShare", fmt: "ratio", goodDir: null, section: "tokensCache" },
 ];
 
 // Delta badge fed by the 14-day rolling changeRatio (current vs previous window).
@@ -167,8 +167,9 @@ const SECTIONS = {
       { kind: "line", title: "Interrupts / day", sub: "runtime interrupts", pick: (s) => s.activity.interrupts, fmt: "int", color: "ink" },
     ],
   },
-  activity: {
-    title: "Activity", blurb: "Raw throughput of the system: how much conversation is happening and how it’s shaped.",
+  activityLimits: {
+    title: "Activity and Limits", blurb: "Rate-limit headroom, plus how much conversation is happening and how it’s shaped.",
+    limits: true,
     chart: { title: "Sessions per day", sub: "distinct sessions", pick: (s) => s.activity.sessions, fmt: "int", color: "ink", goodDir: null, now: (s) => FMT.int(H.last(s.activity.sessions)) },
     charts: [
       { kind: "multiline", title: "Turns vs messages", sub: "per day", fmt: "int",
@@ -180,8 +181,8 @@ const SECTIONS = {
         lines: [{ name: "Requested", color: C[0], pick: (s, sc) => sc.account.series.permissionRequests || [] }, { name: "Denied", color: C[3], pick: (s, sc) => sc.account.series.permissionDenied || [] }] },
     ],
   },
-  tokens: {
-    title: "Tokens", blurb: "Where the tokens go — by type, by model, and per session.",
+  tokensCache: {
+    title: "Tokens and Cache", blurb: "Where the tokens go — by type, by model, per session — plus cache economics and reasoning budget.",
     chart: { title: "Tokens per day", sub: "all token types", pick: (s) => s.tokens.total, fmt: "tok", color: "ink", goodDir: null, now: (s) => FMT.tok(H.last(s.tokens.total)) },
     charts: [
       { kind: "stack", title: "Token composition", sub: "input · output · cache · reasoning", fmt: "tok",
@@ -194,53 +195,33 @@ const SECTIONS = {
         ] },
       { kind: "bars", bars: "modelTokens", title: "Per-model token mix", sub: "total tokens by model · range" },
       { kind: "line", title: "Tokens / session", sub: "mean per session", pick: (s) => s.tokens.perSession, fmt: "tok", color: "ink" },
-    ],
-  },
-  cache: {
-    title: "Cache", blurb: "Cache economics — how much we’re reading back vs paying to create.",
-    chart: { title: "Cache hit ratio", sub: "cache-read ÷ (read + creation + fresh input)", pick: (s) => s.cache.hit, fmt: "ratio", color: "ink", goodDir: "up", now: (s) => (H.last(s.cache.hit) * 100).toFixed(1) + "%" },
-    charts: [
+      { kind: "line", title: "Cache hit ratio", sub: "cache-read ÷ (read + creation + fresh input)", pick: (s) => s.cache.hit, fmt: "ratio", color: "ink", goodDir: "up" },
       { kind: "stack", title: "Read vs creation vs fresh input", sub: "cache token types per day", fmt: "tok",
         layers: [
           { name: "Cache read", color: C[1], pick: (s) => s.tokens.comp.cacheRead },
           { name: "Cache create", color: C[2], pick: (s) => s.tokens.comp.cacheCreate },
           { name: "Fresh input", color: C[0], pick: (s) => s.tokens.comp.input },
         ] },
-    ],
-  },
-  reasoning: {
-    title: "Reasoning", blurb: "Thinking budget — exact for Codex, estimated for Claude.",
-    chart: { title: "Reasoning-token share (Codex)", sub: "reasoning ÷ output tokens · exact", pick: (s) => s.reasoning.codex, fmt: "ratio", color: "accent", goodDir: null, now: (s) => (H.last(s.reasoning.codex) * 100).toFixed(1) + "%" },
-    charts: [
       { kind: "multiline", title: "Codex reasoning vs Claude thinking", sub: "share · exact vs estimated", fmt: "ratio",
         lines: [{ name: "Codex reasoning", color: C[0], pick: (s) => s.reasoning.codex }, { name: "Claude thinking", color: C[3], pick: (s) => s.reasoning.claude }] },
     ],
   },
-  tools: {
-    title: "Tools", blurb: "What the assistant reaches for, how much it produces, and where it fails.",
+  latencyTools: {
+    title: "Latency and Tools", blurb: "Latency from the user’s seat, and what the assistant reaches for, produces, and fails on.",
+    chart: { title: "Avg turn duration", sub: "wall-clock seconds per turn", pick: (s) => s.timing.turnDuration, fmt: "sec", color: "ink", goodDir: "down", now: (s) => H.last(s.timing.turnDuration).toFixed(1) + "s" },
     charts: [
+      { kind: "line", title: "Time to first token", sub: "ms", pick: (s) => s.timing.ttft, fmt: "ms", color: "accent", goodDir: "down" },
+      { kind: "line", title: "Output throughput", sub: "tokens / sec", pick: (s) => s.timing.throughput, fmt: (v) => v.toFixed(0) + " tok/s", color: "ink", goodDir: "up" },
+      { kind: "line", title: "Avg tool latency", sub: "ms", pick: (s) => s.timing.toolLatency, fmt: "ms", color: "ink", goodDir: "down" },
       { kind: "bars", bars: "toolMix", wide: true, title: "Tool call mix", sub: "share of all tool invocations" },
       { kind: "bars", bars: "toolErrors", title: "Error rate by tool", sub: "failures ÷ calls" },
       { kind: "bars", bars: "toolOutput", title: "Output chars by tool", sub: "bytes produced" },
       { kind: "line", title: "Tools / message", sub: "avg tool calls per message", pick: (s) => s.tools.perMsg, fmt: "num2", color: "ink" },
     ],
   },
-  timing: {
-    title: "Timing", blurb: "Latency from the user’s seat — how fast it starts, runs, and finishes.",
-    chart: { title: "Avg turn duration", sub: "wall-clock seconds per turn", pick: (s) => s.timing.turnDuration, fmt: "sec", color: "ink", goodDir: "down", now: (s) => H.last(s.timing.turnDuration).toFixed(1) + "s" },
-    charts: [
-      { kind: "line", title: "Time to first token", sub: "ms", pick: (s) => s.timing.ttft, fmt: "ms", color: "accent", goodDir: "down" },
-      { kind: "line", title: "Output throughput", sub: "tokens / sec", pick: (s) => s.timing.throughput, fmt: (v) => v.toFixed(0) + " tok/s", color: "ink", goodDir: "up" },
-      { kind: "line", title: "Avg tool latency", sub: "ms", pick: (s) => s.timing.toolLatency, fmt: "ms", color: "ink", goodDir: "down" },
-    ],
-  },
-  limits: {
-    title: "Rate limits", blurb: "Codex 5-hour and weekly windows — estimated time to exhaustion at the current burn, and time to reset.",
-    limits: true,
-  },
 };
 
-const NAV = ["friction", "activity", "tokens", "cache", "reasoning", "tools", "timing", "limits"];
+const NAV = ["friction", "activityLimits", "tokensCache", "latencyTools"];
 
 // harn:assume ui-granularity-live-refetch ref=ui-granularity-control
 // Detailed-charts granularity. Calls onChange(g) so App re-fetches in place (no page
@@ -459,8 +440,8 @@ function SectionDetail({ id, scope, breakdown }) {
         <h2>{cfg.title}</h2>
         <p>{cfg.blurb}</p>
       </div>
-      {cfg.chart && <FeaturedChart chart={cfg.chart} scope={scope} breakdown={breakdown} />}
       {cfg.limits && <RateLimits />}
+      {cfg.chart && <FeaturedChart chart={cfg.chart} scope={scope} breakdown={breakdown} />}
       {cfg.charts && cfg.charts.length > 0 && (
         <div className="chart-grid two">
           {cfg.charts.map((spec, i) => <ChartCard key={i} spec={spec} scope={scope} />)}
@@ -471,4 +452,4 @@ function SectionDetail({ id, scope, breakdown }) {
 }
 // harn:end ui-section-chart-grid
 
-Object.assign(window, { Hero, HeadlineMetrics, SubNav, SectionDetail, buildScope });
+Object.assign(window, { Hero, HeadlineMetrics, SubNav, SectionDetail, buildScope, SECTION_IDS: NAV });
