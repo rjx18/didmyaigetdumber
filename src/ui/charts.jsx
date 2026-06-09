@@ -19,10 +19,6 @@ function pathFor(values, H, padY) {
 }
 
 function pctX(i, n) { return (i / (n - 1)) * 100; }
-function pctY(v, min, span, padFrac) {
-  const inner = 1 - padFrac * 2;
-  return (padFrac + (1 - (v - min) / span) * inner) * 100;
-}
 
 // fmt helpers shared everywhere
 const FMT = {
@@ -50,7 +46,8 @@ function fmtDate(d) {
 //  fmt: key of FMT or fn   color: 'accent'|'ink'|'ghost'
 //  axis: show baseline   compare: days-ago window for delta in tip   goodDir: 'up'|'down'|null
 //  height px,  interactive (hover)
-function MiniLine({ values, dates, fmt = "num2", color = "accent", axis = true, height = 160, compare = 7, goodDir = null, interactive = true, padY = 14, padFrac = 0.12 }) {
+// harn:assume ui-chart-hover-marker-alignment ref=chart-mini-line
+function MiniLine({ values, dates, fmt = "num2", color = "accent", axis = true, height = 160, compare = 7, goodDir = null, interactive = true, padY = 14 }) {
   const [hi, setHi] = useState(null);
   const ref = useRef(null);
   const fmtFn = typeof fmt === "function" ? fmt : FMT[fmt];
@@ -67,7 +64,9 @@ function MiniLine({ values, dates, fmt = "num2", color = "accent", axis = true, 
   }, [interactive, n]);
 
   const xPct = hi != null ? pctX(hi, n) : 0;
-  const yPct = hi != null ? pctY(values[hi], min, span, padFrac) : 0;
+  // Match pathFor exactly: absolute padY within the viewBox, expressed as a % of height,
+  // so the knob/guide/tooltip sit on the line at any height.
+  const yPct = hi != null ? (padY + (1 - (values[hi] - min) / span) * (height - padY * 2)) / height * 100 : 0;
 
   // delta vs `compare` days ago (relative to hovered point)
   let deltaEl = null;
@@ -107,6 +106,7 @@ function MiniLine({ values, dates, fmt = "num2", color = "accent", axis = true, 
     </div>
   );
 }
+// harn:end ui-chart-hover-marker-alignment
 
 // Sparkline: tiny, no axis, hover knob only (used in KPI strip)
 function Spark({ values, color = "ghost", height = 30 }) {

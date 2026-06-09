@@ -1,0 +1,25 @@
+id: frontend-chart-hover-alignment
+title: Align chart hover marker with the plotted line
+assumptions:
+  retire: []
+  create:
+    - id: ui-chart-hover-marker-alignment
+      title: Chart hover marker alignment
+      statement: MiniLine positions the hover knob, guide, and tooltip using the same
+        vertical padding model as the plotted line — absolute `padY` pixels
+        within the viewBox rather than a fractional padding — so the marker sits
+        exactly on the line at any chart height.
+      reason: A fractional padding for the marker did not match the line's absolute
+        padding, leaving the hover dot off the line.
+      depends_on:
+        - ui-live-data-binding
+  reviewed: []
+anchors:
+  ui-chart-hover-marker-alignment:
+    chart-mini-line:
+      action: change
+      reason: Compute the marker Y from padY/height to match pathFor.
+files:
+  - src/ui/charts.jsx
+applied:
+  applied_at: 2026-06-09T00:19:44.821Z

@@ -1,0 +1,11 @@
+id: ui-chart-hover-marker-alignment
+hash: a-08df4a3e73d5
+title: Chart hover marker alignment
+state: active
+statement: MiniLine positions the hover knob, guide, and tooltip using the same
+  vertical padding model as the plotted line — absolute `padY` pixels within the
+  viewBox rather than a fractional padding — so the marker sits exactly on the
+  line at any chart height.
+depends_on:
+  - ui-live-data-binding
+created_by: frontend-chart-hover-alignment
