@@ -107,7 +107,8 @@
 
   const params = new URLSearchParams(window.location.search);
   const days = parseInt(params.get("days") || "90", 10) || 90;
-  const granularity = params.get("granularity") || "";
+  // Default to 2-week buckets when the URL doesn't specify a granularity.
+  const granularity = params.get("granularity") || "2w";
 
   let state = "ok";
   let data;

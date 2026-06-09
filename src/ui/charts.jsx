@@ -3,23 +3,50 @@ const { useState, useRef, useCallback } = React;
 
 // build an SVG path in a 1000 x H viewBox (preserveAspectRatio none keeps it responsive;
 // vector-effect:non-scaling-stroke keeps the line hairline-thin at any width)
-// Catmull-Rom spline → cubic bézier: a smooth curve through every plotted point
-// (tension 1/6). Endpoints are duplicated so the ends aren't clipped.
+// Monotone cubic Hermite spline (Fritsch-Carlson) → cubic bézier. Smooth and passes
+// through every point, but tangents are flattened at extrema so the curve never
+// overshoots the data (no dips below 0, no spurious wiggle on flat/turning series).
 function smoothPath(pts) {
   const n = pts.length;
   if (n === 0) return "";
   if (n === 1) return `M${pts[0][0].toFixed(2)},${pts[0][1].toFixed(2)}`;
+  // secant slopes
+  const dx = [], dy = [], slope = [];
+  for (let i = 0; i < n - 1; i++) {
+    dx[i] = pts[i + 1][0] - pts[i][0];
+    dy[i] = pts[i + 1][1] - pts[i][1];
+    slope[i] = dx[i] !== 0 ? dy[i] / dx[i] : 0;
+  }
+  // tangents
+  const m = new Array(n);
+  m[0] = slope[0];
+  m[n - 1] = slope[n - 2];
+  for (let i = 1; i < n - 1; i++) {
+    if (slope[i - 1] * slope[i] <= 0) {
+      m[i] = 0; // local extremum → flat tangent (prevents overshoot)
+    } else {
+      m[i] = (slope[i - 1] + slope[i]) / 2;
+    }
+  }
+  // Fritsch-Carlson limiter to keep the interpolant monotone
+  for (let i = 0; i < n - 1; i++) {
+    if (slope[i] === 0) { m[i] = 0; m[i + 1] = 0; continue; }
+    const a = m[i] / slope[i];
+    const b = m[i + 1] / slope[i];
+    const s = a * a + b * b;
+    if (s > 9) {
+      const t = 3 / Math.sqrt(s);
+      m[i] = t * a * slope[i];
+      m[i + 1] = t * b * slope[i];
+    }
+  }
   let d = `M${pts[0][0].toFixed(2)},${pts[0][1].toFixed(2)}`;
   for (let i = 0; i < n - 1; i++) {
-    const p0 = pts[i - 1] || pts[i];
-    const p1 = pts[i];
-    const p2 = pts[i + 1];
-    const p3 = pts[i + 2] || p2;
-    const c1x = p1[0] + (p2[0] - p0[0]) / 6;
-    const c1y = p1[1] + (p2[1] - p0[1]) / 6;
-    const c2x = p2[0] - (p3[0] - p1[0]) / 6;
-    const c2y = p2[1] - (p3[1] - p1[1]) / 6;
-    d += ` C${c1x.toFixed(2)},${c1y.toFixed(2)} ${c2x.toFixed(2)},${c2y.toFixed(2)} ${p2[0].toFixed(2)},${p2[1].toFixed(2)}`;
+    const c1x = pts[i][0] + dx[i] / 3;
+    const c1y = pts[i][1] + (m[i] * dx[i]) / 3;
+    const c2x = pts[i + 1][0] - dx[i] / 3;
+    const c2y = pts[i + 1][1] - (m[i + 1] * dx[i]) / 3;
+    d += ` C${c1x.toFixed(2)},${c1y.toFixed(2)} ${c2x.toFixed(2)},${c2y.toFixed(2)} ${pts[i + 1][0].toFixed(2)},${pts[i + 1][1].toFixed(2)}`;
   }
   return d;
 }

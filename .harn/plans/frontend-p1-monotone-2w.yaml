@@ -1,0 +1,27 @@
+id: frontend-p1-monotone-2w
+title: Use no-overshoot smoothing and default to 2w granularity
+assumptions:
+  retire: []
+  create: []
+  reviewed:
+    - id: ui-chart-hover-marker-alignment
+      outcome: unchanged
+      reason: smoothPath switches from Catmull-Rom to a monotone cubic Hermite spline;
+        it still passes through the exact plotted points, so the hover
+        knob/guide alignment is preserved. The curve no longer overshoots below
+        the data.
+    - id: ui-live-data-binding
+      outcome: unchanged
+      reason: The loader still fetches and renders only from /api/ui; it just defaults
+        the granularity query to 2w when the URL specifies none.
+anchors:
+  ui-live-data-binding:
+    ui-data-loader:
+      action: change
+      reason: Default the initial granularity to 2w when the URL has no granularity.
+files:
+  - src/ui/charts.jsx
+  - src/ui/data.js
+  - frontend-dashboard-progress.md
+applied:
+  applied_at: 2026-06-09T06:57:33.466Z

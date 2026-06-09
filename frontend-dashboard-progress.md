@@ -61,3 +61,15 @@ charts, leftover "coming to this section" placeholders, and single-line "All mod
 | R3. Rate-limit card redesign | `frontend-r3-rate-limit-redesign` | complete | phase commit | Lead with reset + used%; exhaustion is a conditional warning. |
 | R4. SPA data loading | `frontend-r4-spa-loading` | complete | phase commit | Async re-fetch on granularity; no page reload. |
 | R5. Per-model multi-line for "All models" | `frontend-r5-per-model-multiline` | complete | phase commit | One colored line per model + legend. |
+
+## Richer sections re-plan (2026-06-09)
+
+From `tmp/plan/frontend-dashboard-richer-sections.md`: multiple charts per tab, no-overshoot
+smoothing, 2w default, Overall/By-model switch, and a remaining-led rate-limit card.
+
+| Phase | Harn plan | Status | Commit | Notes |
+| --- | --- | --- | --- | --- |
+| P1. Monotone smoothing + 2w default | `frontend-p1-monotone-2w` | complete | phase commit | Fritsch-Carlson monotone spline (no overshoot); default granularity 2w. |
+| P2. Stacked-area + multi-chart tabs | `frontend-p2-richer-sections` | planned | — | New StackedArea primitive; each tab renders its full chart inventory. |
+| P3. Overall / By-model switch | `frontend-p3-overall-by-model` | planned | — | Segmented toggle; aggregate vs per-model overlay. |
+| P4. Rate-limit remaining-led cards | `frontend-p4-rate-limit-remaining` | planned | — | %-remaining headline, exhaustion alert, used-up → reset. |
