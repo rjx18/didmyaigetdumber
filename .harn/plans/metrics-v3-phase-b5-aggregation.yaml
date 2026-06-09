@@ -1,0 +1,69 @@
+id: metrics-v3-phase-b5-aggregation
+title: Add shared metric aggregation and corrected rate-limit estimates
+assumptions:
+  retire: []
+  create:
+    - id: metric-aggregation-core
+      title: Metric aggregation core
+      statement: Shared metric helpers sum raw root or per-model metric slices and
+        derive rates, shares, timings, tool aggregates, and attribution coverage
+        from summed numerators and denominators, so rolling, model, and bucketed
+        APIs do not average already-derived daily rates.
+      reason: Rolling status, model views, and granularity need one tested aggregation
+        implementation.
+      depends_on:
+        - per-model-daily-log-schema
+        - daily-metrics-log-schema
+    - id: rate-limit-local-estimates
+      title: Rate-limit local estimates
+      statement: Rate-limit derivation sums additive observed token deltas across all
+        local samples sharing a window reset to estimate local tokens,
+        allowance, token burn, and token ETA, and separately derives
+        account-percentage burn and ETA from status samples, with local-only
+        scope explicit and invalid or non-positive slopes returned as
+        unavailable.
+      reason: The dashboard needs locally summed allowance trends and a
+        coverage-independent percentage ETA without treating one transcript as
+        account-wide usage.
+      depends_on:
+        - date-scoped-transcript-metrics
+        - local-aggregate-privacy
+  reviewed:
+    - id: local-metrics-api
+      outcome: unchanged
+      reason: Existing per-day metrics output remains backward-compatible while new
+        helpers are added for later UI use.
+    - id: per-model-daily-log-schema
+      outcome: unchanged
+      reason: Aggregation reads the existing root and per-model metric slices.
+    - id: daily-metrics-log-schema
+      outcome: unchanged
+      reason: Aggregation reads append-only window samples and additive counters
+        without changing storage.
+    - id: local-aggregate-privacy
+      outcome: unchanged
+      reason: All derived values remain numeric aggregates and safe labels.
+anchors:
+  metric-aggregation-core:
+    aggregation-core:
+      action: change
+      reason: Add shared raw-slice sum and derivation helpers.
+    aggregation-tests:
+      action: change
+      reason: Verify ratio, timing, model, and coverage aggregation.
+  rate-limit-local-estimates:
+    rate-limit-derivations:
+      action: change
+      reason: Derive local token allowance/ETA and account-percentage ETA.
+    rate-limit-tests:
+      action: change
+      reason: Verify concurrent sessions, resets, legacy samples, and invalid slopes.
+    progress-phase-b5:
+      action: change
+      reason: Track B5 completion.
+files:
+  - src/metrics.js
+  - test/metrics.test.js
+  - metrics-v3-progress.md
+applied:
+  applied_at: 2026-06-09T01:30:45.418Z

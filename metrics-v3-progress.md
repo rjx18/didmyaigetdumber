@@ -23,7 +23,9 @@
 <!-- harn:assume live-attribution-reconciliation ref=progress-phase-b4 -->
 | B4. Live-tail integration and reconciliation | `metrics-v3-phase-b4-live-tail` | complete | phase commit | Wrote date-scoped live tails and enforced direct-hook ownership. |
 <!-- harn:end live-attribution-reconciliation -->
-| B5. Aggregation core + rate-limit correction | `metrics-v3-phase-b5-aggregation` | planned | — | |
+<!-- harn:assume rate-limit-local-estimates ref=progress-phase-b5 -->
+| B5. Aggregation core + rate-limit correction | `metrics-v3-phase-b5-aggregation` | complete | phase commit | Summed local window deltas and centralized raw metric aggregation. |
+<!-- harn:end rate-limit-local-estimates -->
 | B6. UI API model views + rolling status | `metrics-v3-phase-b6-ui-api` | planned | — | |
 | B7. Day-and-coarser bucketing | `metrics-v3-phase-b7-bucketing` | planned | — | |
 | B8. Hourly storage + API | `metrics-v3-phase-b8-hourly` | planned | — | |

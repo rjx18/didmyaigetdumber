@@ -1,0 +1,13 @@
+id: rate-limit-local-estimates
+hash: a-6753b26f66bd
+title: Rate-limit local estimates
+state: active
+statement: Rate-limit derivation sums additive observed token deltas across all
+  local samples sharing a window reset to estimate local tokens, allowance,
+  token burn, and token ETA, and separately derives account-percentage burn and
+  ETA from status samples, with local-only scope explicit and invalid or
+  non-positive slopes returned as unavailable.
+depends_on:
+  - date-scoped-transcript-metrics
+  - local-aggregate-privacy
+created_by: metrics-v3-phase-b5-aggregation

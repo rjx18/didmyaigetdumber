@@ -1,0 +1,12 @@
+id: metric-aggregation-core
+hash: a-50ca0b462224
+title: Metric aggregation core
+state: active
+statement: Shared metric helpers sum raw root or per-model metric slices and
+  derive rates, shares, timings, tool aggregates, and attribution coverage from
+  summed numerators and denominators, so rolling, model, and bucketed APIs do
+  not average already-derived daily rates.
+depends_on:
+  - per-model-daily-log-schema
+  - daily-metrics-log-schema
+created_by: metrics-v3-phase-b5-aggregation
