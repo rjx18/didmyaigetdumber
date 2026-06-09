@@ -1,0 +1,22 @@
+id: frontend-consolidation-backlog
+title: Add allowance/tool-trend/throughput backlog items and consolidation tracker
+assumptions:
+  retire: []
+  create: []
+  reviewed:
+    - id: local-aggregate-privacy
+      outcome: unchanged
+      reason: BACKEND_BACKLOG.md items 8/9/10 and the progress tracker are design docs
+        only; they add no code and every item explicitly keeps the
+        aggregate-only, no-raw-content invariant.
+    - id: rolling-status-metrics-api
+      outcome: unchanged
+      reason: The backlog documents future /api/ui additions (allowance series,
+        per-bucket tool counts, generation timing) but changes no server code or
+        API shape now.
+anchors: {}
+files:
+  - BACKEND_BACKLOG.md
+  - frontend-consolidation-progress.md
+applied:
+  applied_at: 2026-06-09T09:16:26.312Z

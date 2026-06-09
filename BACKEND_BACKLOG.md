@@ -133,6 +133,91 @@ aggregates. No raw content, no new invariant risk.
 
 ---
 
+## Item 8 — 5-hour-window allowance series on `/api/ui` *(priority: high, small)*
+
+### Motivation
+The Limits view should show the **estimated 5-hour-window token allowance** over time —
+how big the window's budget is — bucket-averaged at the active granularity. The frontend
+can chart it immediately once exposed.
+
+### Current state
+- Window samples already carry both `tokens_in_window` and `used_percent`
+  (e.g. `{ kind:"weekly", used_percent:58, tokens_in_window:216639 }`), so the implied
+  allowance is computable: `allowance = tokens_in_window / (used_percent / 100)`.
+- `/api/ui` `limits` exposes only `windowHistory` (a used-% series) and a 14-day scalar
+  `localAllowanceEstimateRolling`. There is **no per-bucket allowance series**.
+
+### Proposed change
+- Add `limits.allowanceSeries` (and/or per-window-kind) to `/api/ui`: for each calendar
+  bucket of the current granularity, the **mean of the per-sample implied allowance**
+  (`tokens_in_window / (used_percent/100)`) for the 5h window (skip samples with
+  `used_percent == 0`). Align to the same `buckets[]` as the other series so the frontend
+  can plot it on the granularity axis.
+- Optionally expose the weekly-window allowance series too (decide; the UI asked for 5h).
+
+### Privacy
+Derived from existing numeric window samples. Aggregate-only holds.
+
+### Tests
+- Per-bucket allowance equals the mean of `tokens_in_window/(used_percent/100)` over the
+  bucket's samples; zero-`used_percent` samples are excluded.
+- Empty buckets yield `null` (not `0`); series length aligns with `buckets[]`.
+
+---
+
+## Item 9 — Per-day, per-tool counts for a tool-mix-over-time chart *(priority: medium, medium)*
+
+### Motivation
+The Tools view shows the tool-call mix as static bars aggregated over the whole range; the
+frontend cannot show **how the mix shifts over time** (a stacked area of tool usage by
+bucket) because per-day per-tool counts are not exposed.
+
+### Current state
+- `tool_calls_by_name` is stored per day, but `/api/ui` only emits the range-aggregated
+  `tools.mix[]`. There is no per-day (or per-bucket) tool-count series.
+
+### Proposed change
+- Expose a per-bucket per-tool call-count series (e.g. `tools.byBucket[tool][]` aligned to
+  `buckets[]`, top-N tools + an "other" bucket) so the UI can stack tool usage over time.
+- Output-char (token) variant optional, mirroring the static by-output bars.
+
+### Privacy
+Tool names are sanitized labels already. Aggregate-only holds.
+
+### Tests
+- Per-bucket tool counts sum (over buckets) to the range-aggregated `tools.mix[]` counts.
+- Top-N + other partitioning is stable; empty buckets are 0, not missing.
+
+---
+
+## Item 10 — True generation throughput (tokens/sec) *(priority: medium, larger)*
+
+### Motivation
+`timing.throughput` (`output_tokens_per_sec`) reads implausibly low (~4 tok/s) because it
+divides output tokens by the **entire turn wall-clock**, not the model's generation time.
+
+### Current state
+- Both extractors set `generation_sum` equal to the turn latency
+  (`durationMs(taskStartedAt/lastUserAt, assistant_ts)` — `codex.js:145`, `claude.js:127`),
+  so `output_tokens_per_sec = output_tokens / turn_wall_clock`. That includes queueing,
+  thinking, and intra-turn tool round-trips — not pure generation.
+
+### Proposed change
+- Capture (where the transcripts allow) a **generation duration** distinct from total turn
+  latency — e.g. first-output-token → last-output-token — and feed `generation_sum` from
+  that. If unavailable, document the metric as "output tokens per turn-second" and consider
+  dropping the misleading "throughput" framing.
+- Until then the frontend keeps the current label unchanged (per product decision).
+
+### Privacy
+Timing sums/counts only. Aggregate-only holds.
+
+### Tests
+- `output_tokens_per_sec` uses generation duration, not turn wall-clock, on fixtures with
+  separable timing; falls back gracefully when generation timing is absent.
+
+---
+
 ## Out of scope (recorded, deliberately not requested)
 
 These came up in the same review and are **blocked by the aggregate-only, daily-bucketed
