@@ -38,12 +38,12 @@
 <!-- harn:assume normalized-event-increments ref=progress-phase-5 -->
 | 5. Normalized event model | `phase-5-event-model` | complete | `0966fb5` | In-memory event and increment objects. |
 <!-- harn:end normalized-event-increments -->
-<!-- harn:assume codex-live-hook-counting ref=progress-phase-6 -->
+<!-- harn:assume live-attribution-reconciliation ref=progress-phase-6 -->
 | 6. Codex live hook adapter | `phase-6-codex-hooks` | complete | `a3766c5` | Codex hook normalization and init. |
-<!-- harn:end codex-live-hook-counting -->
-<!-- harn:assume claude-live-hook-counting ref=progress-phase-7 -->
+<!-- harn:end live-attribution-reconciliation -->
+<!-- harn:assume live-attribution-reconciliation ref=progress-phase-7 -->
 | 7. Claude Code live hook adapter | `phase-7-claude-hooks` | complete | `b554d66` | Claude hook normalization and init. |
-<!-- harn:end claude-live-hook-counting -->
+<!-- harn:end live-attribution-reconciliation -->
 <!-- harn:assume backfill-idempotent-writes ref=progress-phase-8 -->
 | 8. Historical backfill | `phase-8-backfill-core` | complete | `feb8826` | Shared backfill write behavior. |
 <!-- harn:end backfill-idempotent-writes -->

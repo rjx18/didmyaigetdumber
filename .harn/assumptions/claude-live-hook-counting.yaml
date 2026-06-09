@@ -1,7 +1,7 @@
 id: claude-live-hook-counting
 hash: a-e599c27049a4
 title: Claude Code live hook counting
-state: active
+state: retired
 statement: Claude Code live hook payloads are normalized from hook event names
   and counted through the shared pattern and daily-log increment path, so user
   prompts, visible assistant messages, tools, permissions, and runtime failures
@@ -12,3 +12,4 @@ depends_on:
   - scope-pattern-loader
   - npm-cli-entrypoint
 created_by: phase-7-claude-hooks
+retired_by: metrics-v3-phase-b4-live-tail

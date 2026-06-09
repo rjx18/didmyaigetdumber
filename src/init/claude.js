@@ -21,7 +21,7 @@ function readJsonIfExists(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
 
-// harn:assume claude-live-hook-counting ref=claude-init
+// harn:assume live-attribution-reconciliation ref=claude-init
 function mergeClaudeSettings(existing = {}, command) {
   const next = { ...existing, hooks: { ...(existing.hooks || {}) } };
   const hook = {
@@ -62,7 +62,7 @@ async function initClaude(options = {}, io) {
   // harn:end claude-historical-backfill
   return 0;
 }
-// harn:end claude-live-hook-counting
+// harn:end live-attribution-reconciliation
 
 module.exports = {
   CLAUDE_HOOK_EVENTS,

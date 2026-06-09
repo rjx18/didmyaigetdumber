@@ -221,7 +221,7 @@ test('simulated hook, backfill, report, and server workflow stays aggregate-only
   }
 });
 
-// harn:assume metrics-end-to-end-verification ref=integration-metrics-tests
+// harn:assume metrics-v3-end-to-end-verification ref=integration-metrics-tests
 test('backfill and live tailing produce the same metric deltas', async () => {
   const backfillBase = tempBase();
   const liveBase = tempBase();
@@ -279,5 +279,5 @@ test('backfill and live tailing produce the same metric deltas', async () => {
   assert.equal(serialized.includes('ignored output text'), false);
   assert.equal(serialized.includes('ignored tool output'), false);
 });
-// harn:end metrics-end-to-end-verification
+// harn:end metrics-v3-end-to-end-verification
 // harn:end end-to-end-verification

@@ -77,7 +77,7 @@ function denied(payload = {}) {
   );
 }
 
-// harn:assume codex-live-hook-counting ref=codex-adapter
+// harn:assume live-attribution-reconciliation ref=codex-adapter
 function normalizeCodexPayload(payload = {}) {
   const type = eventName(payload);
   const normalized = {
@@ -123,7 +123,7 @@ function normalizeCodexPayload(payload = {}) {
 
   return normalized;
 }
-// harn:end codex-live-hook-counting
+// harn:end live-attribution-reconciliation
 
 module.exports = {
   CODEX_HOOK_EVENTS,

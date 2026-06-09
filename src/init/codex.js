@@ -21,7 +21,7 @@ function readJsonIfExists(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
 
-// harn:assume codex-live-hook-counting ref=codex-init
+// harn:assume live-attribution-reconciliation ref=codex-init
 function mergeCodexHooksConfig(existing = {}, command) {
   const next = { ...existing, hooks: { ...(existing.hooks || {}) } };
   const hookEntry = {
@@ -56,7 +56,7 @@ async function initCodex(options = {}, io) {
   // harn:end codex-historical-backfill
   return 0;
 }
-// harn:end codex-live-hook-counting
+// harn:end live-attribution-reconciliation
 
 module.exports = {
   CODEX_HOOK_EVENTS,

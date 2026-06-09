@@ -29,7 +29,7 @@ function writeJsonl(filePath, records) {
   fs.writeFileSync(filePath, records.map((record) => JSON.stringify(record)).join('\n') + '\n');
 }
 
-// harn:assume codex-live-hook-counting ref=codex-hook-tests
+// harn:assume live-attribution-reconciliation ref=codex-hook-tests
 test('normalizes Codex user prompt payloads', () => {
   const normalized = normalizeCodexPayload({
     event_type: 'UserPromptSubmit',
@@ -61,7 +61,21 @@ test('handles Codex user prompt hooks through aggregate storage', async () => {
   assert.equal(log.matches.user_1pt.line_hits >= 2, true);
 });
 
-// harn:assume live-hook-numeric-tail-integration ref=codex-hook-tail-tests
+test('uses SessionStart only to ensure the daily log exists', async () => {
+  const baseDir = tempBase();
+  await handleHook({ baseDir }, {
+    stdin: Readable.from([JSON.stringify({
+      event_type: 'SessionStart',
+      timestamp: '2026-06-08T01:00:00.000Z',
+    })]),
+    stdout: sink(),
+    stderr: sink(),
+  });
+
+  assert.equal(readDailyLog('2026-06-08', { baseDir }).totals.sessions, 0);
+});
+
+// harn:assume live-attribution-reconciliation ref=codex-hook-tail-tests
 test('tails Codex transcripts on stop hooks for numeric metrics', async () => {
   const baseDir = tempBase();
   const transcriptPath = path.join(baseDir, 'private-session.jsonl');
@@ -84,10 +98,28 @@ test('tails Codex transcripts on stop hooks for numeric metrics', async () => {
 
   await handleHook({ baseDir }, {
     stdin: Readable.from([JSON.stringify({
+      event_type: 'PostToolUse',
+      timestamp: '2026-06-08T01:00:16.000Z',
+    })]),
+    stdout: sink(),
+    stderr: sink(),
+  });
+  await handleHook({ baseDir }, {
+    stdin: Readable.from([JSON.stringify({
       event_type: 'Stop',
       session_id: 'codex-session-1',
       transcript_path: transcriptPath,
       timestamp: '2026-06-08T01:00:31.000Z',
+    })]),
+    stdout: sink(),
+    stderr: sink(),
+  });
+  await handleHook({ baseDir }, {
+    stdin: Readable.from([JSON.stringify({
+      event_type: 'Stop',
+      session_id: 'codex-session-1',
+      transcript_path: transcriptPath,
+      timestamp: '2026-06-08T01:00:32.000Z',
     })]),
     stdout: sink(),
     stderr: sink(),
@@ -99,7 +131,9 @@ test('tails Codex transcripts on stop hooks for numeric metrics', async () => {
   assert.equal(log.tokens.input, 100);
   assert.equal(log.tokens.reasoning_output, 4);
   assert.equal(log.model_tokens['gpt-5.4'].total, 150);
+  assert.equal(log.by_model['gpt-5.4'].tokens.total, 150);
   assert.equal(log.tool_calls_by_name.Bash, 1);
+  assert.equal(log.totals.tool_calls, 1);
   assert.equal(log.tool_output_chars.Bash, 'ignored output text'.length);
   assert.equal(log.windows[0].tokens_in_window, 150);
   assert.equal(log.totals.turns, 1);
@@ -107,7 +141,39 @@ test('tails Codex transcripts on stop hooks for numeric metrics', async () => {
   assert.equal(serialized.includes('ignored command text'), false);
   assert.equal(serialized.includes('ignored output text'), false);
 });
-// harn:end live-hook-numeric-tail-integration
+
+test('writes live tail metrics to their record-derived dates', async () => {
+  const baseDir = tempBase();
+  const transcriptPath = path.join(baseDir, 'cross-midnight.jsonl');
+  writeJsonl(transcriptPath, [
+    { timestamp: '2026-06-08T15:59:00.000Z', type: 'turn_context', payload: { model: 'gpt-5.4' } },
+    { timestamp: '2026-06-08T15:59:10.000Z', type: 'event_msg', payload: { type: 'task_started' } },
+    { timestamp: '2026-06-08T15:59:20.000Z', type: 'response_item', payload: { type: 'function_call', name: 'Read', call_id: 'call-1' } },
+    { timestamp: '2026-06-08T16:00:10.000Z', type: 'response_item', payload: { type: 'function_call_output', call_id: 'call-1', output: 'private output' } },
+    {
+      timestamp: '2026-06-08T16:00:20.000Z',
+      type: 'event_msg',
+      payload: { type: 'token_count', info: { last_token_usage: { input_tokens: 10, total_tokens: 10 } } },
+    },
+    { timestamp: '2026-06-08T16:00:30.000Z', type: 'event_msg', payload: { type: 'task_complete' } },
+  ]);
+
+  await handleHook({ baseDir }, {
+    stdin: Readable.from([JSON.stringify({
+      event_type: 'Stop',
+      session_id: 'cross-midnight',
+      transcript_path: transcriptPath,
+      timestamp: '2026-06-08T16:00:31.000Z',
+    })]),
+    stdout: sink(),
+    stderr: sink(),
+  });
+
+  assert.equal(readDailyLog('2026-06-08', { baseDir }).tool_calls_by_name.Read, 1);
+  assert.equal(readDailyLog('2026-06-09', { baseDir }).tokens.total, 10);
+  assert.equal(readDailyLog('2026-06-09', { baseDir }).tool_output_chars.Read, 'private output'.length);
+});
+// harn:end live-attribution-reconciliation
 
 test('merges Codex hook config without duplicating didmyaigetdumber entries', () => {
   const first = mergeCodexHooksConfig({}, '/tmp/dimyd');
@@ -129,4 +195,4 @@ test('writes Codex hook config to an explicit path', async () => {
   const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
   assert.equal(config.hooks.SessionStart[0].name, 'didmyaigetdumber');
 });
-// harn:end codex-live-hook-counting
+// harn:end live-attribution-reconciliation

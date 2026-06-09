@@ -1,7 +1,7 @@
 id: codex-live-hook-counting
 hash: a-4713f8c4336f
 title: Codex live hook counting
-state: active
+state: retired
 statement: Codex live hook payloads are normalized defensively and counted
   through the shared pattern and daily-log increment path, so user messages,
   tools, permissions, sessions, and runtime interrupts update aggregate logs
@@ -12,3 +12,4 @@ depends_on:
   - scope-pattern-loader
   - npm-cli-entrypoint
 created_by: phase-6-codex-hooks
+retired_by: metrics-v3-phase-b4-live-tail

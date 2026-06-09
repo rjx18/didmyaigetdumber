@@ -1,0 +1,185 @@
+id: metrics-v3-phase-b4-live-tail
+title: Reconcile date-scoped live hooks and transcript tailing
+assumptions:
+  retire:
+    - id: live-hook-numeric-tail-integration
+      reason: Live tailing now writes date-scoped schema v3 increments and
+        participates in an explicit ownership split with direct hooks.
+    - id: codex-live-hook-counting
+      reason: SessionStart becomes ensure-only and Codex direct hook counting is
+        reconciled with transcript-derived metrics.
+    - id: claude-live-hook-counting
+      reason: SessionStart becomes ensure-only and Claude direct hook counting is
+        reconciled with transcript-derived metrics.
+    - id: metrics-end-to-end-verification
+      reason: End-to-end verification must cover schema v3 date-scoped backfill/live
+        parity.
+  create:
+    - id: live-attribution-reconciliation
+      title: Live attribution reconciliation
+      statement: Direct Codex and Claude hooks own immediate global friction,
+        tool-total, permission, and runtime counters while SessionStart only
+        ensures the daily log exists, and low-frequency transcript tails write
+        date-scoped numeric, tool-detail, timing, window, and per-model
+        increments without re-adding direct-hook-owned root counters, so live
+        collection remains non-blocking and avoids double counting.
+      reason: Live schema v3 data needs explicit producer ownership, cross-midnight
+        writes, and truthful per-model attribution.
+      depends_on:
+        - date-scoped-transcript-metrics
+        - turn-model-attribution
+        - transcript-offset-tail-store
+        - daily-log-locking
+        - numeric-transcript-tail-privacy
+    - id: metrics-v3-end-to-end-verification
+      title: Metrics v3 end-to-end verification
+      statement: The test suite compares schema v3 historical backfill and date-scoped
+        live transcript tailing over the same sanitized records, verifies
+        repeated tails and cross-midnight writes, and confirms logs and APIs
+        omit raw transcript content.
+      reason: The producer ownership split and date-scoped writes require end-to-end
+        regression coverage.
+      depends_on:
+        - historical-per-model-backfill
+        - live-attribution-reconciliation
+        - local-metrics-api
+        - aggregate-only-safety-checks
+  reviewed:
+    - id: transcript-offset-tail-store
+      outcome: unchanged
+      reason: Existing offsets prevent repeated tail records from being ingested twice.
+    - id: normalized-event-increments
+      outcome: unchanged
+      reason: Non-SessionStart direct hooks still use normalized aggregate increments.
+    - id: codex-historical-backfill
+      outcome: unchanged
+      reason: Codex historical behavior remains covered by the replacement v3
+        verification contract.
+    - id: claude-historical-backfill
+      outcome: unchanged
+      reason: Claude historical behavior remains covered by the replacement v3
+        verification contract.
+    - id: doctor-health-checks
+      outcome: unchanged
+      reason: Installed hook health checks are unchanged.
+    - id: end-to-end-verification
+      outcome: unchanged
+      reason: The broader workflow verification remains valid.
+    - id: interactive-install-onboarding
+      outcome: unchanged
+      reason: Hook installation remains unchanged.
+anchors:
+  live-hook-numeric-tail-integration:
+    hook-tail:
+      action: remove
+      reason: Replace single-date live tail merging.
+    codex-hook-tail-tests:
+      action: remove
+      reason: Replace Codex schema v2 live-tail tests.
+    claude-hook-tail-tests:
+      action: remove
+      reason: Replace Claude schema v2 live-tail tests.
+    progress-phase-6:
+      action: remove
+      reason: Replace old live-tail progress contract.
+  codex-live-hook-counting:
+    hook-runner:
+      action: remove
+      reason: Replace Codex-specific runner ownership with reconciled ownership.
+    codex-adapter:
+      action: remove
+      reason: Re-anchor Codex adapter behavior to reconciled live ownership.
+    codex-init:
+      action: remove
+      reason: Re-anchor Codex installation behavior.
+    codex-hook-tests:
+      action: remove
+      reason: Re-anchor Codex hook tests.
+    progress-phase-6:
+      action: remove
+      reason: Re-anchor progress.
+  claude-live-hook-counting:
+    hook-agent-routing:
+      action: remove
+      reason: Replace Claude-specific runner ownership with reconciled ownership.
+    claude-adapter:
+      action: remove
+      reason: Re-anchor Claude adapter behavior to reconciled live ownership.
+    claude-init:
+      action: remove
+      reason: Re-anchor Claude installation behavior.
+    claude-hook-tests:
+      action: remove
+      reason: Re-anchor Claude hook tests.
+    progress-phase-7:
+      action: remove
+      reason: Re-anchor progress.
+  metrics-end-to-end-verification:
+    integration-metrics-tests:
+      action: remove
+      reason: Replace schema v2 parity tests.
+    progress-phase-9:
+      action: remove
+      reason: Replace schema v2 verification progress.
+  live-attribution-reconciliation:
+    hook-tail:
+      action: change
+      reason: Return and write date-scoped transcript increments.
+    hook-runner:
+      action: change
+      reason: Make SessionStart ensure-only and preserve direct global ownership.
+    codex-adapter:
+      action: change
+      reason: Keep Codex normalized direct-hook behavior under the reconciled contract.
+    claude-adapter:
+      action: change
+      reason: Keep Claude normalized direct-hook behavior under the reconciled
+        contract.
+    codex-init:
+      action: change
+      reason: Keep installing Codex hooks including ensure-only SessionStart.
+    claude-init:
+      action: change
+      reason: Keep installing Claude hooks including ensure-only SessionStart.
+    codex-hook-tests:
+      action: change
+      reason: Verify Codex direct ownership and ensure-only SessionStart.
+    claude-hook-tests:
+      action: change
+      reason: Verify Claude direct ownership and ensure-only SessionStart.
+    codex-hook-tail-tests:
+      action: change
+      reason: Verify date-scoped Codex live tailing.
+    claude-hook-tail-tests:
+      action: change
+      reason: Verify date-scoped Claude live tailing.
+    progress-phase-6:
+      action: change
+      reason: Track replacement live behavior.
+    progress-phase-7:
+      action: change
+      reason: Track replacement live behavior.
+    progress-phase-b4:
+      action: change
+      reason: Track B4 completion.
+  metrics-v3-end-to-end-verification:
+    integration-metrics-tests:
+      action: change
+      reason: Verify v3 backfill/live parity and cross-midnight behavior.
+    progress-phase-9:
+      action: change
+      reason: Track replacement end-to-end verification.
+files:
+  - src/hook.js
+  - src/adapters/codex.js
+  - src/adapters/claude.js
+  - src/init/codex.js
+  - src/init/claude.js
+  - test/codex.test.js
+  - test/claude.test.js
+  - test/integration.test.js
+  - simple-hook-telemetry-progress.md
+  - metrics-hooks-backend-progress.md
+  - metrics-v3-progress.md
+applied:
+  applied_at: 2026-06-09T01:27:38.001Z

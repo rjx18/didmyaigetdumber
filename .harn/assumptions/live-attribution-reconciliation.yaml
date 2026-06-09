@@ -1,0 +1,17 @@
+id: live-attribution-reconciliation
+hash: a-87323e4cc54d
+title: Live attribution reconciliation
+state: active
+statement: Direct Codex and Claude hooks own immediate global friction,
+  tool-total, permission, and runtime counters while SessionStart only ensures
+  the daily log exists, and low-frequency transcript tails write date-scoped
+  numeric, tool-detail, timing, window, and per-model increments without
+  re-adding direct-hook-owned root counters, so live collection remains
+  non-blocking and avoids double counting.
+depends_on:
+  - date-scoped-transcript-metrics
+  - turn-model-attribution
+  - transcript-offset-tail-store
+  - daily-log-locking
+  - numeric-transcript-tail-privacy
+created_by: metrics-v3-phase-b4-live-tail

@@ -3,11 +3,11 @@
 const { normalizeCodexPayload } = require('./adapters/codex');
 const { normalizeClaudePayload } = require('./adapters/claude');
 const { incrementFromEvent } = require('./events');
-const { updateDailyLog, localDate } = require('./log-store');
+const { ensureDailyLog, updateDailyLog, localDate } = require('./log-store');
 const { tailJsonlTranscript } = require('./offset-store');
 const { matchPatterns } = require('./patterns');
-const { extractClaudeMetrics } = require('./extractors/claude');
-const { extractCodexMetrics } = require('./extractors/codex');
+const { extractClaudeMetricsByDate } = require('./extractors/claude');
+const { extractCodexMetricsByDate } = require('./extractors/codex');
 
 async function readStdin(stdin) {
   let input = '';
@@ -87,14 +87,14 @@ function hasMetricData(increment) {
     || Object.keys(increment.tool_output_chars).length > 0
     || Object.keys(increment.tool_calls_by_name).length > 0
     || Object.keys(increment.tool_failures_by_name).length > 0
-    || Object.keys(increment.model_tokens).length > 0
+    || Object.keys(increment.by_model).length > 0
     || Object.values(increment.timings_ms).some((value) => value > 0)
     || Object.keys(increment.tool_latency_ms_by_name).length > 0
     || increment.windows.length > 0;
 }
 
-// harn:assume live-hook-numeric-tail-integration ref=hook-tail
-function liveTailIncrement(agent, payload, normalized, options = {}) {
+// harn:assume live-attribution-reconciliation ref=hook-tail
+function liveTailIncrementsByDate(agent, payload, normalized, options = {}) {
   if (!shouldTailTranscript(agent, normalized.event_type)) {
     return null;
   }
@@ -109,18 +109,22 @@ function liveTailIncrement(agent, payload, normalized, options = {}) {
       sessionId: sessionId(payload),
       transcriptPath: filePath,
     }, options);
-    const increment = agent === 'claude'
-      ? extractClaudeMetrics(tail.records)
-      : extractCodexMetrics(tail.records);
-    return hasMetricData(increment) ? increment : null;
+    const dayMap = agent === 'claude'
+      ? extractClaudeMetricsByDate(tail.records, { fallbackDate: dateForPayload(payload, options) })
+      : extractCodexMetricsByDate(tail.records, { fallbackDate: dateForPayload(payload, options) });
+    for (const [date, increment] of [...dayMap]) {
+      if (!hasMetricData(increment)) {
+        dayMap.delete(date);
+      }
+    }
+    return dayMap.size > 0 ? dayMap : null;
   } catch (_error) {
     return null;
   }
 }
-// harn:end live-hook-numeric-tail-integration
+// harn:end live-attribution-reconciliation
 
-// harn:assume codex-live-hook-counting ref=hook-runner
-// harn:assume claude-live-hook-counting ref=hook-agent-routing
+// harn:assume live-attribution-reconciliation ref=hook-runner
 async function handleHook(options = {}, io) {
   const payload = options.payload || parsePayload(await readStdin(io.stdin));
   const agent = detectAgent(payload, options);
@@ -128,25 +132,31 @@ async function handleHook(options = {}, io) {
     ? normalizeClaudePayload(payload)
     : normalizeCodexPayload(payload);
 
+  const date = dateForPayload(payload, options);
+  if (normalized.event_type === 'SessionStart') {
+    ensureDailyLog(date, options);
+    return 0;
+  }
+
   if (normalized.scope && normalized.text) {
     normalized.pattern_match = matchPatterns(normalized.scope, normalized.text);
   }
 
   const increment = incrementFromEvent(normalized);
-  const date = dateForPayload(payload, options);
   updateDailyLog(date, increment, options);
 
-  const metricsIncrement = liveTailIncrement(agent, payload, normalized, options);
-  if (metricsIncrement) {
-    updateDailyLog(date, metricsIncrement, options);
+  const metricsByDate = liveTailIncrementsByDate(agent, payload, normalized, options);
+  if (metricsByDate) {
+    for (const [metricDate, metricsIncrement] of metricsByDate) {
+      updateDailyLog(metricDate, metricsIncrement, options);
+    }
   }
   return 0;
 }
-// harn:end claude-live-hook-counting
-// harn:end codex-live-hook-counting
+// harn:end live-attribution-reconciliation
 
 module.exports = {
   handleHook,
-  liveTailIncrement,
+  liveTailIncrementsByDate,
   shouldTailTranscript,
 };

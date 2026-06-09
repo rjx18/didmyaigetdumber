@@ -1,0 +1,14 @@
+id: metrics-v3-end-to-end-verification
+hash: a-dc5f795424f7
+title: Metrics v3 end-to-end verification
+state: active
+statement: The test suite compares schema v3 historical backfill and date-scoped
+  live transcript tailing over the same sanitized records, verifies repeated
+  tails and cross-midnight writes, and confirms logs and APIs omit raw
+  transcript content.
+depends_on:
+  - historical-per-model-backfill
+  - live-attribution-reconciliation
+  - local-metrics-api
+  - aggregate-only-safety-checks
+created_by: metrics-v3-phase-b4-live-tail

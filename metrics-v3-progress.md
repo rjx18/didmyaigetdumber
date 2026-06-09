@@ -20,7 +20,9 @@
 <!-- harn:assume historical-per-model-backfill ref=progress-phase-b3 -->
 | B3. Historical backfill integration | `metrics-v3-phase-b3-backfill` | complete | phase commit | Merged date-scoped metrics and model-attributed counters during backfill. |
 <!-- harn:end historical-per-model-backfill -->
-| B4. Live-tail integration and reconciliation | `metrics-v3-phase-b4-live-tail` | planned | — | |
+<!-- harn:assume live-attribution-reconciliation ref=progress-phase-b4 -->
+| B4. Live-tail integration and reconciliation | `metrics-v3-phase-b4-live-tail` | complete | phase commit | Wrote date-scoped live tails and enforced direct-hook ownership. |
+<!-- harn:end live-attribution-reconciliation -->
 | B5. Aggregation core + rate-limit correction | `metrics-v3-phase-b5-aggregation` | planned | — | |
 | B6. UI API model views + rolling status | `metrics-v3-phase-b6-ui-api` | planned | — | |
 | B7. Day-and-coarser bucketing | `metrics-v3-phase-b7-bucketing` | planned | — | |

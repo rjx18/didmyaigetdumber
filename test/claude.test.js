@@ -29,7 +29,7 @@ function writeJsonl(filePath, records) {
   fs.writeFileSync(filePath, records.map((record) => JSON.stringify(record)).join('\n') + '\n');
 }
 
-// harn:assume claude-live-hook-counting ref=claude-hook-tests
+// harn:assume live-attribution-reconciliation ref=claude-hook-tests
 test('normalizes Claude user and assistant hook payloads', () => {
   const user = normalizeClaudePayload({
     hook_event_name: 'UserPromptSubmit',
@@ -65,7 +65,7 @@ test('handles Claude assistant display hooks through aggregate storage', async (
   assert.equal(log.matches.assistant_1pt.events, 1);
 });
 
-// harn:assume live-hook-numeric-tail-integration ref=claude-hook-tail-tests
+// harn:assume live-attribution-reconciliation ref=claude-hook-tail-tests
 test('tails Claude transcripts on session end hooks for numeric metrics', async () => {
   const baseDir = tempBase();
   const transcriptPath = path.join(baseDir, 'private-session.jsonl');
@@ -118,6 +118,7 @@ test('tails Claude transcripts on session end hooks for numeric metrics', async 
   assert.equal(log.tokens.output, 40);
   assert.equal(log.tokens.thinking_chars, 'private thinking text'.length);
   assert.equal(log.model_tokens['hf:moonshotai/Kimi-K2.6'].output, 40);
+  assert.equal(log.by_model['hf:moonshotai/Kimi-K2.6'].tokens.output, 40);
   assert.equal(log.tool_calls_by_name.Bash, 1);
   assert.equal(log.tool_output_chars.Bash, 'ignored tool output'.length);
   assert.equal(log.tool_failures_by_name.Bash, 1);
@@ -127,7 +128,7 @@ test('tails Claude transcripts on session end hooks for numeric metrics', async 
   assert.equal(serialized.includes('ignored command text'), false);
   assert.equal(serialized.includes('ignored tool output'), false);
 });
-// harn:end live-hook-numeric-tail-integration
+// harn:end live-attribution-reconciliation
 
 test('merges Claude settings without duplicating didmyaigetdumber entries', () => {
   const first = mergeClaudeSettings({}, '/tmp/dimyd');
@@ -149,4 +150,4 @@ test('writes Claude settings to an explicit path', async () => {
   const settings = JSON.parse(fs.readFileSync(configPath, 'utf8'));
   assert.equal(settings.hooks.MessageDisplay[0].hooks[0].env.DIDMYAIGETDUMBER_AGENT, 'claude');
 });
-// harn:end claude-live-hook-counting
+// harn:end live-attribution-reconciliation

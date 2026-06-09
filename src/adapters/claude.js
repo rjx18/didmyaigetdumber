@@ -34,7 +34,7 @@ function assistantText(payload = {}) {
   return firstString(payload.text, payload.content, payload.message, message.text, message.content);
 }
 
-// harn:assume claude-live-hook-counting ref=claude-adapter
+// harn:assume live-attribution-reconciliation ref=claude-adapter
 function normalizeClaudePayload(payload = {}) {
   const type = eventName(payload);
   const normalized = {
@@ -90,7 +90,7 @@ function normalizeClaudePayload(payload = {}) {
 
   return normalized;
 }
-// harn:end claude-live-hook-counting
+// harn:end live-attribution-reconciliation
 
 module.exports = {
   CLAUDE_HOOK_EVENTS,
