@@ -295,6 +295,9 @@ body {
 }
 .gran-btn:hover { color: var(--ink); }
 .gran-btn.on { color: var(--strong); background: var(--raise); }
+.gran.loading { opacity: 0.6; }
+.gran-btn:disabled { cursor: progress; }
+.detail.loading { transition: opacity 0.15s ease; opacity: 0.55; }
 
 /* ---------- section detail ---------- */
 .detail { scroll-margin-top: 72px; }

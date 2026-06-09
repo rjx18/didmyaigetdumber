@@ -1,7 +1,7 @@
 id: ui-granularity-selector
 hash: a-77e23222f16e
 title: UI granularity selector re-buckets the detailed charts
-state: active
+state: retired
 statement: The dashboard detailed section offers a granularity control (`1h`,
   `day`, `week`, `2w`, `month`) that reflects and sets the `granularity` URL
   parameter and reloads to re-fetch server-bucketed series from `/api/ui`,
@@ -13,3 +13,4 @@ depends_on:
   - granularity-bucketing-api
   - sub-daily-hourly-storage
 created_by: frontend-fe-e-granularity
+retired_by: frontend-r4-spa-loading

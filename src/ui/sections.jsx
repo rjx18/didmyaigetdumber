@@ -4,25 +4,31 @@ const H = D.helpers;
 
 // harn:assume ui-model-selector ref=ui-model-scope
 // A model "scope" carries the active series/rolling/status/tool-mix for the selected
-// model. "all" (or an unknown id) reads the aggregate; a model id reads byModel[id].
-// Rate-limit windows are account-wide and intentionally NOT part of the scope.
-const ALL_SERIES = {
-  friction: D.friction, activity: D.activity, tokens: D.tokens, cache: D.cache,
-  reasoning: D.reasoning, tools: D.tools, timing: D.timing,
-};
-function buildScope(model) {
-  const m = model && model !== "all" ? D.byModel[model] : null;
+// model, plus the shared days/range/limits/models/byModel the sections need. It is
+// built from the *current* data object (re-fetched in place), so a granularity change
+// flows through. "all" reads the aggregate; a model id reads byModel[id]. Rate-limit
+// windows are account-wide and intentionally NOT model-scoped.
+function buildScope(data, model) {
+  const shared = {
+    days: data.days, range: data.range || {}, limits: data.limits || {},
+    models: data.models || [], byModel: data.byModel || {},
+  };
+  const m = model && model !== "all" ? (data.byModel || {})[model] : null;
   if (m) {
-    return {
+    return Object.assign({}, shared, {
       model, series: m.series, rolling: m.rolling, status: m.status,
       toolsMix: (m.aggregates && m.aggregates.tools) || (m.series.tools && m.series.tools.mix) || [],
       coverage: m.coverage || null,
-    };
+    });
   }
-  return {
-    model: "all", series: ALL_SERIES, rolling: D.all.rolling, status: D.all.status,
-    toolsMix: D.tools.mix, coverage: null,
+  const allSeries = {
+    friction: data.friction, activity: data.activity, tokens: data.tokens, cache: data.cache,
+    reasoning: data.reasoning, tools: data.tools, timing: data.timing,
   };
+  return Object.assign({}, shared, {
+    model: "all", series: allSeries, rolling: data.all.rolling, status: data.all.status,
+    toolsMix: data.tools.mix, coverage: null,
+  });
 }
 // harn:end ui-model-selector
 
@@ -46,10 +52,11 @@ function statusReason(status, rolling) {
   return "Above threshold: " + bad.map((k) => SIGNAL_LABEL[k] || k).join(" · ") + "." + trend;
 }
 
-function rangeLabel() {
-  const n = D.days.length;
-  const end = n ? D.days[n - 1] : null;
-  const gran = (D.range && D.range.granularity) || "day";
+function rangeLabel(scope) {
+  const days = scope.days || [];
+  const n = days.length;
+  const end = n ? days[n - 1] : null;
+  const gran = (scope.range && scope.range.granularity) || "day";
   return {
     span: n + (gran === "1h" ? " hours" : " days"),
     through: end ? end.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—",
@@ -61,7 +68,7 @@ function Hero({ scope }) {
   const ok = status.verdict === "healthy";
   const word = VERDICT_WORD[status.verdict] || "Unknown";
   const pulse = ok ? "ok ok-bg" : status.verdict === "degraded" ? "bad bad-bg" : "";
-  const r = rangeLabel();
+  const r = rangeLabel(scope);
   return (
     <div className="hero">
       <div>
@@ -181,34 +188,27 @@ const SECTIONS = {
 
 const NAV = ["friction", "activity", "tokens", "cache", "reasoning", "tools", "timing", "limits"];
 
-// harn:assume ui-granularity-selector ref=ui-granularity-control
-// Detailed-charts granularity. Driven by the `granularity` URL param (the same way
-// `days` is) and applied by reloading so the server re-buckets the series; the
-// 14-day rolling KPIs/status are unaffected. `1h` is bounded server-side to the
-// hourly retention window.
+// harn:assume ui-granularity-live-refetch ref=ui-granularity-control
+// Detailed-charts granularity. Calls onChange(g) so App re-fetches in place (no page
+// reload); the server re-buckets the series and the 14-day rolling KPIs/status are
+// unaffected. `1h` is bounded server-side to the hourly retention window.
 const GRANULARITIES = ["1h", "day", "week", "2w", "month"];
 
-function setGranularity(g) {
-  const p = new URLSearchParams(window.location.search);
-  if (g === "day") p.delete("granularity"); else p.set("granularity", g);
-  const qs = p.toString();
-  window.location.search = qs ? "?" + qs : "";
-}
-
-function GranularityControl() {
-  const current = (D.range && D.range.granularity) || "day";
+function GranularityControl({ current, loading, onChange }) {
+  const active = current || "day";
   return (
-    <div className="gran" role="group" aria-label="Chart granularity">
+    <div className={"gran" + (loading ? " loading" : "")} role="group" aria-label="Chart granularity">
       {GRANULARITIES.map((g) => (
-        <button key={g} className={"gran-btn" + (current === g ? " on" : "")}
-          aria-pressed={current === g} onClick={() => current !== g && setGranularity(g)}>{g}</button>
+        <button key={g} className={"gran-btn" + (active === g ? " on" : "")}
+          aria-pressed={active === g} disabled={loading}
+          onClick={() => active !== g && onChange(g)}>{g}</button>
       ))}
     </div>
   );
 }
-// harn:end ui-granularity-selector
+// harn:end ui-granularity-live-refetch
 
-function SubNav({ active, onChange }) {
+function SubNav({ active, onChange, granularity, onGranularity, loading }) {
   return (
     <div className="subnav-wrap">
       <span className="eyebrow">02 · Explore</span>
@@ -218,7 +218,7 @@ function SubNav({ active, onChange }) {
             className="sx" onClick={() => onChange(id)}>{SECTIONS[id].title}</button>
         ))}
       </nav>
-      <GranularityControl />
+      <GranularityControl current={granularity} loading={loading} onChange={onGranularity} />
     </div>
   );
 }
@@ -254,7 +254,7 @@ function FeaturedChart({ chart, scope }) {
         </div>
         <div className="chart-now num">{chart.now(scope.series)}</div>
       </div>
-      <MiniLine values={values} dates={D.days} fmt={chart.fmt} color={chart.color} height={200} goodDir={chart.goodDir} />
+      <MiniLine values={values} dates={scope.days} fmt={chart.fmt} color={chart.color} height={200} goodDir={chart.goodDir} />
     </div>
   );
 }

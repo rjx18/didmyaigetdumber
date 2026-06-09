@@ -81,12 +81,32 @@ function ModelSelector({ model, options, coverage, onChange }) {
 // harn:end ui-model-selector
 
 function App() {
-  const dataState = window.DATA_STATE || "ok";
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
   const [section, setSection] = useState(() => localStorage.getItem("ait_section") || "friction");
   const [model, setModel, modelOpts] = useModel();
+  const [data, setData] = useState(window.DATA);
+  const [gran, setGran] = useState((window.DATA.range && window.DATA.range.granularity) || "day");
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState(null);
   const detailRef = useRef(null);
-  const scope = dataState === "ok" ? window.buildScope(model) : null;
+
+  const dataState = err ? "error" : (data && data.N ? "ok" : (window.DATA_STATE === "error" ? "error" : "empty"));
+  const scope = dataState === "ok" ? window.buildScope(data, model) : null;
+
+  // In-place re-fetch on granularity change — no page reload, scroll preserved.
+  const changeGranularity = (g) => {
+    setLoading(true);
+    window.loadUiData(window.UI_DAYS, g).then((d) => {
+      setData(d); setGran(g); setErr(null);
+      const p = new URLSearchParams(window.location.search);
+      if (g === "day") p.delete("granularity"); else p.set("granularity", g);
+      const qs = p.toString();
+      window.history.replaceState(null, "", qs ? "?" + qs : window.location.pathname);
+    }).catch((e) => {
+      setErr(e);
+      window.DATA_ERROR = String((e && e.message) || e);
+    }).finally(() => setLoading(false));
+  };
 
   useEffect(() => { localStorage.setItem("ait_section", section); }, [section]);
 
@@ -134,8 +154,9 @@ function App() {
             <>
               <Hero scope={scope} />
               <HeadlineMetrics scope={scope} onPick={goTo} />
-              <div ref={detailRef} className="detail">
-                <SubNav active={section} onChange={setSection} />
+              <div ref={detailRef} className={"detail" + (loading ? " loading" : "")}>
+                <SubNav active={section} onChange={setSection}
+                  granularity={gran} onGranularity={changeGranularity} loading={loading} />
                 <SectionDetail id={section} scope={scope} />
               </div>
             </>

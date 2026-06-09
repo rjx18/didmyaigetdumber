@@ -1,0 +1,16 @@
+id: ui-granularity-live-refetch
+hash: a-a8da33ceaad3
+title: Granularity control re-fetches in place
+state: active
+statement: Changing the detailed-section granularity (`1h`/`day`/`week`/`2w`/
+  `month`) calls `window.loadUiData(days, granularity)` to fetch and adapt a
+  fresh `/api/ui` payload asynchronously, updates React state in place (no page
+  reload, scroll position preserved), reflects the choice in the URL via
+  `history.replaceState`, and shows a transient loading state while fetching;
+  the 14-day rolling KPIs/status are still server-computed and `1h` stays
+  bounded server-side.
+depends_on:
+  - ui-live-data-binding
+  - granularity-bucketing-api
+  - sub-daily-hourly-storage
+created_by: frontend-r4-spa-loading

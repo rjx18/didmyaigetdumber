@@ -84,6 +84,27 @@
     return body.data;
   }
 
+  // Async re-fetch used by in-place controls (e.g. granularity) so the page never
+  // reloads. Demo mode resolves synthetic data (no network).
+  function loadUiData(days, granularity) {
+    if (params.has("demo")) {
+      return Promise.resolve(buildSynthetic(helpers, days));
+    }
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      let url = "/api/ui?days=" + encodeURIComponent(days);
+      if (granularity) url += "&granularity=" + encodeURIComponent(granularity);
+      xhr.open("GET", url, true);
+      xhr.onload = () => {
+        if (xhr.status !== 200) { reject(new Error("HTTP " + xhr.status)); return; }
+        try { resolve(adaptLive(JSON.parse(xhr.responseText).data)); }
+        catch (err) { reject(err); }
+      };
+      xhr.onerror = () => reject(new Error("network error"));
+      xhr.send(null);
+    });
+  }
+
   const params = new URLSearchParams(window.location.search);
   const days = parseInt(params.get("days") || "90", 10) || 90;
   const granularity = params.get("granularity") || "";
@@ -106,6 +127,8 @@
 
   window.DATA = data;
   window.DATA_STATE = state;
+  window.UI_DAYS = days;
+  window.loadUiData = loadUiData;
   // harn:end ui-live-data-binding
 
   /* Deterministic (seeded) synthetic data — ?demo=1 only. */

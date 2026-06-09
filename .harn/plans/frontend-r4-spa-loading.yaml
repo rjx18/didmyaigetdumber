@@ -1,0 +1,69 @@
+id: frontend-r4-spa-loading
+title: Re-fetch dashboard data in place without a page reload
+assumptions:
+  retire:
+    - id: ui-granularity-selector
+      reason: The control navigated the page (window.location.search) and forced a
+        full reload that scrolled to top; it is being replaced with an in-place
+        async re-fetch.
+  create:
+    - id: ui-granularity-live-refetch
+      title: Granularity control re-fetches in place
+      statement: Changing the detailed-section granularity (`1h`/`day`/`week`/`2w`/
+        `month`) calls `window.loadUiData(days, granularity)` to fetch and adapt
+        a fresh `/api/ui` payload asynchronously, updates React state in place
+        (no page reload, scroll position preserved), reflects the choice in the
+        URL via `history.replaceState`, and shows a transient loading state
+        while fetching; the 14-day rolling KPIs/status are still server-computed
+        and `1h` stays bounded server-side.
+      reason: A hard reload on every granularity change is jarring and loses scroll
+        and section state; the dashboard must refresh data like a SPA.
+      depends_on:
+        - ui-live-data-binding
+        - granularity-bucketing-api
+        - sub-daily-hourly-storage
+  reviewed:
+    - id: ui-live-data-binding
+      outcome: unchanged
+      reason: Still binds to /api/ui and renders only from that response; this adds an
+        async loader (window.loadUiData) alongside the initial sync load.
+    - id: ui-model-selector
+      outcome: unchanged
+      reason: buildScope still maps a selection to byModel[id] vs the aggregate; it
+        now takes the current data object so re-fetched data flows through, and
+        the scope carries days/range/limits for the components.
+    - id: ui-rolling-status-rendering
+      outcome: unchanged
+      reason: The hero still renders the server status/rolling; rangeLabel now reads
+        the range from the active scope so it reflects the current granularity.
+anchors:
+  ui-live-data-binding:
+    ui-data-loader:
+      action: change
+      reason: Add window.loadUiData async loader and expose UI_DAYS for re-fetching.
+  ui-model-selector:
+    ui-model-scope:
+      action: change
+      reason: buildScope(data, model) takes the current data and carries
+        days/range/limits/models/byModel on the scope.
+  ui-rolling-status-rendering:
+    ui-status-hero:
+      action: change
+      reason: rangeLabel reads days/range from the scope so it tracks granularity.
+  ui-granularity-selector:
+    ui-granularity-control:
+      action: remove
+      reason: Re-point this region off the retired URL-reload assumption.
+  ui-granularity-live-refetch:
+    ui-granularity-control:
+      action: change
+      reason: GranularityControl calls an onChange callback (in-place re-fetch)
+        instead of navigating the page.
+files:
+  - src/ui/data.js
+  - src/ui/app.jsx
+  - src/ui/sections.jsx
+  - src/ui/styles.css
+  - frontend-dashboard-progress.md
+applied:
+  applied_at: 2026-06-09T05:14:02.462Z
