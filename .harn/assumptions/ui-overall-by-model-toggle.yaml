@@ -1,7 +1,7 @@
 id: ui-overall-by-model-toggle
 hash: a-9070658291c2
 title: Overall/By-model switch controls the featured chart
-state: active
+state: retired
 statement: When "All models" is selected the top bar shows a persisted
   Overall/By-model segmented switch; "By model" (default) draws the per-model
   overlay and "Overall" draws the single aggregate line, which is already the
@@ -12,3 +12,4 @@ depends_on:
   - ui-model-selector
   - ui-per-model-multiline
 created_by: frontend-p3-overall-by-model
+retired_by: frontend-consolidation-p2-controls

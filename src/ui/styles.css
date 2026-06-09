@@ -321,6 +321,9 @@ body {
 }
 .gran-btn:hover { color: var(--ink); }
 .gran-btn.on { color: var(--strong); background: var(--raise); }
+.subnav-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
+.subnav-controls .gran, .subnav-controls .seg { margin: 0; }
+.sd-window { margin-top: 10px; font-size: 11.5px; color: var(--faint); letter-spacing: 0.01em; }
 .gran.loading { opacity: 0.6; }
 .gran-btn:disabled { cursor: progress; }
 .detail.loading { transition: opacity 0.15s ease; opacity: 0.55; }

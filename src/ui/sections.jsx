@@ -142,7 +142,7 @@ function HeadlineMetrics({ scope, onPick }) {
     <>
       <div className="section-rule">
         <span className="eyebrow">01</span>
-        <h3>Headline metrics</h3>
+        <h3>At a glance</h3>
       </div>
       <div className="kpis">
         {KPI_LIST.map((it, i) => <KPI key={i} item={it} scope={scope} onPick={onPick} />)}
@@ -243,7 +243,7 @@ function GranularityControl({ current, loading, onChange }) {
 }
 // harn:end ui-granularity-live-refetch
 
-function SubNav({ active, onChange, granularity, onGranularity, loading }) {
+function SubNav({ active, onChange, granularity, onGranularity, loading, children }) {
   return (
     <div className="subnav-wrap">
       <span className="eyebrow">02 · Explore</span>
@@ -253,7 +253,10 @@ function SubNav({ active, onChange, granularity, onGranularity, loading }) {
             className="sx" onClick={() => onChange(id)}>{SECTIONS[id].title}</button>
         ))}
       </nav>
-      <GranularityControl current={granularity} loading={loading} onChange={onGranularity} />
+      <div className="subnav-controls">
+        <GranularityControl current={granularity} loading={loading} onChange={onGranularity} />
+        {children}
+      </div>
     </div>
   );
 }
@@ -432,6 +435,18 @@ function ChartCard({ spec, scope }) {
   );
 }
 
+// One time-window descriptor for every chart in a section (range + granularity + span).
+const GRAN_LABEL = { "1h": "hourly", day: "daily", week: "weekly", "2w": "two-week", month: "monthly" };
+function sectionWindow(scope) {
+  const days = (scope && scope.days) || [];
+  if (!days.length) return "";
+  const gran = (scope.range && scope.range.granularity) || "day";
+  const label = GRAN_LABEL[gran] || gran;
+  const fmt = (d) => d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const span = days.length > 1 ? fmt(days[0]) + " – " + fmt(days[days.length - 1]) : fmt(days[0]);
+  return days.length + " " + label + " buckets · " + span;
+}
+
 function SectionDetail({ id, scope, breakdown }) {
   const cfg = SECTIONS[id];
   return (
@@ -439,6 +454,7 @@ function SectionDetail({ id, scope, breakdown }) {
       <div className="sd-head">
         <h2>{cfg.title}</h2>
         <p>{cfg.blurb}</p>
+        <div className="sd-window num">{sectionWindow(scope)}</div>
       </div>
       {cfg.limits && <RateLimits />}
       {cfg.chart && <FeaturedChart chart={cfg.chart} scope={scope} breakdown={breakdown} />}

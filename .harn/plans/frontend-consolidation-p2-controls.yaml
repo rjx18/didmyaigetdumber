@@ -1,0 +1,48 @@
+id: frontend-consolidation-p2-controls
+title: Move the breakdown toggle by granularity, rename heading, add window labels
+assumptions:
+  retire:
+    - id: ui-overall-by-model-toggle
+      reason: The Overall/By-model switch moves out of the top bar to the explore row
+        next to the granularity control; the documented location changes.
+  create:
+    - id: ui-breakdown-control
+      title: Overall/By-model switch sits by the granularity control
+      statement: When "All models" is selected, a persisted Overall/By-model segmented
+        switch renders in the explore (sub-nav) row next to the granularity
+        control; "By model" (default) draws the per-model overlay and "Overall"
+        draws the single aggregate line (already usage-weighted server-side); it
+        is hidden when a specific model is selected.
+      reason: The breakdown control belongs with the other chart controls
+        (granularity), not in the global top bar.
+      depends_on:
+        - ui-model-selector
+        - ui-per-model-multiline
+  reviewed:
+    - id: ui-section-chart-grid
+      outcome: unchanged
+      reason: SectionDetail still renders the featured chart, optional rate-limit
+        cards, and the chart grid; it additionally shows a section-level
+        time-window label so every chart's period is stated.
+anchors:
+  ui-overall-by-model-toggle:
+    ui-breakdown-toggle:
+      action: remove
+      reason: Re-point this region off the retired assumption.
+  ui-breakdown-control:
+    ui-breakdown-toggle:
+      action: change
+      reason: Keep the persisted toggle/state but render it in the explore row (passed
+        as SubNav children); re-point the anchor to the new assumption.
+  ui-section-chart-grid:
+    section-chart-grid:
+      action: change
+      reason: Add a section-level time-window label (range + granularity + date span)
+        to the section header.
+files:
+  - src/ui/app.jsx
+  - src/ui/sections.jsx
+  - src/ui/styles.css
+  - frontend-consolidation-progress.md
+applied:
+  applied_at: 2026-06-09T10:18:33.272Z

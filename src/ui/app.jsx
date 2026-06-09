@@ -80,9 +80,10 @@ function ModelSelector({ model, options, coverage, onChange }) {
 }
 // harn:end ui-model-selector
 
-// harn:assume ui-overall-by-model-toggle ref=ui-breakdown-toggle
-// Overall vs By-model breakdown for the All-models featured chart. "Overall" is the
-// single server-weighted aggregate; "By model" overlays one line per model.
+// harn:assume ui-breakdown-control ref=ui-breakdown-toggle
+// Overall vs By-model breakdown for the All-models featured chart, rendered in the
+// explore row next to the granularity control. "Overall" is the single server-weighted
+// aggregate; "By model" overlays one line per model.
 const BREAKDOWN_KEY = "ait_breakdown";
 
 function useBreakdown() {
@@ -102,7 +103,7 @@ function BreakdownToggle({ value, onChange }) {
     </div>
   );
 }
-// harn:end ui-overall-by-model-toggle
+// harn:end ui-breakdown-control
 
 function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
@@ -170,9 +171,6 @@ function App() {
           {dataState === "ok" && (
             <ModelSelector model={model} options={modelOpts} coverage={scope && scope.coverage} onChange={setModel} />
           )}
-          {dataState === "ok" && model === "all" && (
-            <BreakdownToggle value={breakdown} onChange={setBreakdown} />
-          )}
           <button className="ghost-btn" onClick={() => setTweak("dark", !t.dark)}>
             {t.dark ? "◑ dark" : "◐ light"}
           </button>
@@ -187,7 +185,9 @@ function App() {
               <HeadlineMetrics scope={scope} onPick={goTo} />
               <div ref={detailRef} className={"detail" + (loading ? " loading" : "")}>
                 <SubNav active={section} onChange={setSection}
-                  granularity={gran} onGranularity={changeGranularity} loading={loading} />
+                  granularity={gran} onGranularity={changeGranularity} loading={loading}>
+                  {model === "all" && <BreakdownToggle value={breakdown} onChange={setBreakdown} />}
+                </SubNav>
                 <SectionDetail id={section} scope={scope} breakdown={breakdown} />
               </div>
             </>

@@ -1,0 +1,13 @@
+id: ui-breakdown-control
+hash: a-c9b143bdc582
+title: Overall/By-model switch sits by the granularity control
+state: active
+statement: When "All models" is selected, a persisted Overall/By-model segmented
+  switch renders in the explore (sub-nav) row next to the granularity control;
+  "By model" (default) draws the per-model overlay and "Overall" draws the
+  single aggregate line (already usage-weighted server-side); it is hidden when
+  a specific model is selected.
+depends_on:
+  - ui-model-selector
+  - ui-per-model-multiline
+created_by: frontend-consolidation-p2-controls
