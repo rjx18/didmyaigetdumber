@@ -26,6 +26,8 @@
 <!-- harn:assume rate-limit-local-estimates ref=progress-phase-b5 -->
 | B5. Aggregation core + rate-limit correction | `metrics-v3-phase-b5-aggregation` | complete | phase commit | Summed local window deltas and centralized raw metric aggregation. |
 <!-- harn:end rate-limit-local-estimates -->
-| B6. UI API model views + rolling status | `metrics-v3-phase-b6-ui-api` | planned | — | |
+<!-- harn:assume rolling-status-metrics-api ref=progress-phase-b6 -->
+| B6. UI API model views + rolling status | `metrics-v3-phase-b6-ui-api` | complete | phase commit | Added calendar rolling/status, model views, account fields, and corrected limits. |
+<!-- harn:end rolling-status-metrics-api -->
 | B7. Day-and-coarser bucketing | `metrics-v3-phase-b7-bucketing` | planned | — | |
 | B8. Hourly storage + API | `metrics-v3-phase-b8-hourly` | planned | — | |

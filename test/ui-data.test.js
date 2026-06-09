@@ -30,7 +30,7 @@ function writeAggregate(date, options, values) {
   writeDailyLog(log, options);
 }
 
-// harn:assume ui-aggregate-data-endpoint ref=ui-data-tests
+// harn:assume rolling-status-metrics-api ref=ui-data-tests
 test('builds aggregate UI payload with derived series and range aggregates', () => {
   const baseDir = tempBase();
   writeAggregate('2026-06-08', { baseDir }, {
@@ -59,7 +59,7 @@ test('builds aggregate UI payload with derived series and range aggregates', () 
     ],
   });
 
-  const data = buildUiData({ baseDir, days: 30 });
+  const data = buildUiData({ baseDir, days: 1, asOf: '2026-06-08', now: new Date('2026-06-08T02:00:00.000Z') });
 
   assert.equal(data.N, 1);
   assert.deepEqual(data.days, ['2026-06-08']);
@@ -99,7 +99,11 @@ test('builds aggregate UI payload with derived series and range aggregates', () 
   assert.equal(data.tools.mix[1].errRate, 0.3333);
 
   // models
-  assert.deepEqual(data.models, [{ name: 'gpt-5-codex', tokens: 460 }]);
+  assert.deepEqual(data.models, [{ id: 'gpt-5-codex', name: 'gpt-5-codex', tokens: 460, attributedTurns: 0 }]);
+  assert.equal(data.apiVersion, 2);
+  assert.equal(data.range.granularity, 'day');
+  assert.equal(data.all.rolling.tokensPerDay.current, 32.8571);
+  assert.equal(data.all.status.verdict, 'degraded');
 
   // limits
   assert.equal(data.limits.windowUsedPct, 0.3);
@@ -107,14 +111,42 @@ test('builds aggregate UI payload with derived series and range aggregates', () 
   assert.equal(data.limits.burnRate, 200);
 });
 
+test('builds calendar-aligned rolling and per-model views', () => {
+  const baseDir = tempBase();
+  writeAggregate('2026-05-20', { baseDir }, {
+    totals: { turns: 1, user_messages: 10 },
+    user_1pt: { events: 1 },
+    tokens: { total: 140 },
+    model_tokens: { 'gpt-test': { total: 140 } },
+  });
+  writeAggregate('2026-06-03', { baseDir }, {
+    totals: { turns: 2, user_messages: 10 },
+    user_1pt: { events: 2 },
+    tokens: { total: 280 },
+    model_tokens: { 'gpt-test': { total: 280 } },
+  });
+
+  const data = buildUiData({ baseDir, days: 7, asOf: '2026-06-09', now: new Date('2026-06-09T00:00:00.000Z') });
+
+  assert.equal(data.days.length, 7);
+  assert.deepEqual(data.days.slice(-2), ['2026-06-08', '2026-06-09']);
+  assert.equal(data.N, 1);
+  assert.equal(data.all.rolling.friction.current, 0.2);
+  assert.equal(data.all.rolling.friction.previous, 0.1);
+  assert.equal(data.all.rolling.tokensPerDay.current, 20);
+  assert.equal(data.all.rolling.tokensPerDay.previous, 10);
+  assert.equal(data.byModel['gpt-test'].rolling.tokensPerDay.current, 20);
+  assert.equal(data.byModel['gpt-test'].coverage.tokens, 1);
+});
+
 test('builds empty payload for an empty range without throwing', () => {
   const baseDir = tempBase();
   const data = buildUiData({ baseDir, days: 30 });
   assert.equal(data.N, 0);
-  assert.deepEqual(data.days, []);
+  assert.equal(data.days.length, 30);
   assert.deepEqual(data.tools.mix, []);
   assert.deepEqual(data.models, []);
   assert.equal(data.limits.windowUsedPct, 0);
   assert.deepEqual(data.limits.windowHistory, []);
 });
-// harn:end ui-aggregate-data-endpoint
+// harn:end rolling-status-metrics-api

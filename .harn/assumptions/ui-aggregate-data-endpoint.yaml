@@ -1,7 +1,7 @@
 id: ui-aggregate-data-endpoint
 hash: a-28ee90e84931
 title: UI aggregate data endpoint
-state: active
+state: retired
 statement: The server assembles one aggregate-only dashboard payload from the
   daily logs over a day range and serves it at `GET /api/ui?days=N`, containing
   per-day friction (total/user/assistant and 1pt/2pt severity), activity, token
@@ -15,3 +15,4 @@ depends_on:
   - local-aggregate-privacy
   - local-dashboard-server
 created_by: frontend-phase-2-ui-data-endpoint
+retired_by: metrics-v3-phase-b6-ui-api

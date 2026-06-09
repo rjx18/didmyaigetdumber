@@ -1,0 +1,16 @@
+id: rolling-status-metrics-api
+hash: a-069ac7b7e367
+title: Rolling status metrics API
+state: active
+statement: The GET /api/ui endpoint returns an aggregate-only versioned payload
+  with calendar-aligned all-model and per-model series, account-scoped fields,
+  model attribution coverage, current-versus-prior 14-calendar-day rolling
+  metrics and status, and corrected global rate-limit estimates, while
+  preserving temporary root aliases for the existing frontend.
+depends_on:
+  - metric-aggregation-core
+  - rate-limit-local-estimates
+  - local-metrics-api
+  - local-dashboard-server
+  - local-aggregate-privacy
+created_by: metrics-v3-phase-b6-ui-api

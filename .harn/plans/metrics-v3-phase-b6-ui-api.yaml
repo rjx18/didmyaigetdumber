@@ -1,0 +1,92 @@
+id: metrics-v3-phase-b6-ui-api
+title: Add model views rolling status and corrected limits to UI API
+assumptions:
+  retire:
+    - id: ui-aggregate-data-endpoint
+      reason: The UI endpoint now serves calendar-aligned model views, rolling status,
+        account fields, coverage, and corrected limits in addition to
+        compatibility aliases.
+  create:
+    - id: rolling-status-metrics-api
+      title: Rolling status metrics API
+      statement: The GET /api/ui endpoint returns an aggregate-only versioned payload
+        with calendar-aligned all-model and per-model series, account-scoped
+        fields, model attribution coverage, current-versus-prior 14-calendar-day
+        rolling metrics and status, and corrected global rate-limit estimates,
+        while preserving temporary root aliases for the existing frontend.
+      reason: The dashboard model toggle and stable KPIs need one tested backend
+        contract without exposing raw aggregation components.
+      depends_on:
+        - metric-aggregation-core
+        - rate-limit-local-estimates
+        - local-metrics-api
+        - local-dashboard-server
+        - local-aggregate-privacy
+  reviewed:
+    - id: ui-live-data-binding
+      outcome: unchanged
+      reason: Existing frontend fields remain available as compatibility aliases.
+    - id: local-metrics-api
+      outcome: unchanged
+      reason: The separate metrics-days endpoint remains backward-compatible.
+    - id: local-dashboard-server
+      outcome: unchanged
+      reason: The existing /api/ui route serves the expanded payload.
+    - id: aggregate-only-safety-checks
+      outcome: unchanged
+      reason: Privacy tests are extended across all new response branches.
+    - id: local-aggregate-privacy
+      outcome: unchanged
+      reason: The expanded API contains numeric aggregates and safe labels only.
+anchors:
+  ui-aggregate-data-endpoint:
+    ui-data-builder:
+      action: remove
+      reason: Replace activity-day-only UI payload construction.
+    server-ui-api:
+      action: remove
+      reason: Re-anchor the route to the expanded API contract.
+    ui-data-tests:
+      action: remove
+      reason: Replace legacy-only UI payload tests.
+    progress-phase-2:
+      action: remove
+      reason: Re-anchor frontend progress to the current API contract.
+  rolling-status-metrics-api:
+    ui-data-builder:
+      action: change
+      reason: Build calendar-aligned model, rolling, status, account, and limit data.
+    server-ui-api:
+      action: change
+      reason: Serve the expanded versioned payload.
+    ui-data-tests:
+      action: change
+      reason: Verify model slices, rolling math, missing days, status, and
+        compatibility aliases.
+    server-ui-tests:
+      action: change
+      reason: Verify the expanded route shape over HTTP.
+    progress-phase-2:
+      action: change
+      reason: Track the current UI API contract.
+    progress-phase-b6:
+      action: change
+      reason: Track B6 completion.
+  aggregate-only-safety-checks:
+    privacy-tests:
+      action: change
+      reason: Verify every expanded UI API branch remains aggregate-only.
+  local-dashboard-server:
+    server-http:
+      action: change
+      reason: Keep the expanded /api/ui route under the local server contract.
+files:
+  - src/ui-data.js
+  - src/server.js
+  - test/ui-data.test.js
+  - test/server.test.js
+  - test/privacy.test.js
+  - frontend-dashboard-progress.md
+  - metrics-v3-progress.md
+applied:
+  applied_at: 2026-06-09T01:35:19.520Z

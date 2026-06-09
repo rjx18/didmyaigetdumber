@@ -137,12 +137,12 @@ function createServer(options = {}) {
     }
     // harn:end local-metrics-api
 
-    // harn:assume ui-aggregate-data-endpoint ref=server-ui-api
+    // harn:assume rolling-status-metrics-api ref=server-ui-api
     if (url.pathname === '/api/ui') {
       json(res, { data: buildUiData({ ...options, days: url.searchParams.get('days') || options.days }) });
       return;
     }
-    // harn:end ui-aggregate-data-endpoint
+    // harn:end rolling-status-metrics-api
 
     if (url.pathname === '/health') {
       json(res, { ok: true });
