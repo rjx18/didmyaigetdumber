@@ -312,10 +312,10 @@ function FeaturedChart({ chart, scope, breakdown }) {
 }
 // harn:end ui-per-model-multiline
 
-// harn:assume ui-rate-limit-window-cards ref=ui-rate-limit-view
-// Account-wide rate-limit windows. Lead with when the window resets and how full it
-// is (both always meaningful); time-to-exhaustion is only a conditional warning when
-// you're on pace to run out before the window resets. Token allowance is not knowable
+// harn:assume ui-rate-limit-remaining-cards ref=ui-rate-limit-view
+// Account-wide rate-limit windows. Lead with how much headroom is left (% remaining)
+// when the window is not used up, alerting only when it's on pace to exhaust before it
+// resets; when used up, lead with the time until reset. Token allowance is not knowable
 // per machine, so it shows only when the backend could estimate it.
 function fmtHrs(h) {
   if (h == null) return "—";
@@ -334,25 +334,32 @@ function WindowCard({ label, w }) {
     );
   }
   const used = Math.round(w.usedPercent);
+  const remaining = Math.max(0, 100 - used);
   const exhaust = w.percentTimeToExhaustHrs;
   const reset = w.timeToResetHrs;
-  let statusCls = "ok";
-  let statusText = "On track — resets before exhaustion.";
-  if (exhaust == null) {
-    statusCls = "muted";
-    statusText = "Burn rate unknown — not enough samples yet.";
-  } else if (reset != null && exhaust < reset) {
-    statusCls = "warn";
-    statusText = "On pace to exhaust in " + fmtHrs(exhaust) + " — before it resets.";
-  }
+  const usedUp = remaining <= 0;
+  const willExhaustFirst = !usedUp && exhaust != null && reset != null && exhaust < reset;
   return (
     <div className="lim-card">
       <div className="lim-title">{label}</div>
-      <div className="lim-primary num">{fmtHrs(reset)}</div>
-      <div className="lim-sub">until reset</div>
+      {usedUp ? (
+        <>
+          <div className="lim-primary num">{fmtHrs(reset)}</div>
+          <div className="lim-sub">until reset · window exhausted</div>
+        </>
+      ) : (
+        <>
+          <div className="lim-primary num">{remaining}%</div>
+          <div className="lim-sub">remaining</div>
+        </>
+      )}
       <div className="lim-bar"><span style={{ width: Math.min(100, used) + "%" }} /></div>
       <div className="lim-used"><span className="num">{used}%</span> used</div>
-      <div className={"lim-status " + statusCls}>{statusText}</div>
+      {!usedUp && (willExhaustFirst ? (
+        <div className="lim-status warn">⚠ Est. exhaustion in {fmtHrs(exhaust)} — before reset ({fmtHrs(reset)}).</div>
+      ) : (
+        <div className="lim-status ok">{exhaust == null ? "Burn rate unknown — not enough samples." : "Resets in " + fmtHrs(reset) + ", before exhaustion."}</div>
+      ))}
       <div className="lim-row"><span>Burn</span><span className="num">{w.burnPctPointsPerHour == null ? "—" : w.burnPctPointsPerHour.toFixed(1) + " pp/h"}</span></div>
       {w.localAllowanceEstimateRolling != null && (
         <div className="lim-row"><span>Allowance · 14d</span><span className="num">{FMT.tok(w.localAllowanceEstimateRolling)}</span></div>
@@ -368,7 +375,7 @@ function RateLimits() {
       <div className="chart-head">
         <div>
           <div className="chart-title">Rate-limit windows</div>
-          <div className="chart-sub">time until each window resets and how full it is · account-wide</div>
+          <div className="chart-sub">headroom remaining and estimated exhaustion · account-wide</div>
         </div>
       </div>
       <div className="lim-grid">
@@ -390,7 +397,7 @@ function RateLimits() {
     </div>
   );
 }
-// harn:end ui-rate-limit-window-cards
+// harn:end ui-rate-limit-remaining-cards
 
 // harn:assume ui-section-chart-grid ref=section-chart-grid
 // Categorical bar charts (tool/model breakdowns) for a section, from the active scope.

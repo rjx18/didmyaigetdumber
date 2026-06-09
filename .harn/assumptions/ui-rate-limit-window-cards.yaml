@@ -1,7 +1,7 @@
 id: ui-rate-limit-window-cards
 hash: a-e59e0cf9b49e
 title: UI rate-limit cards lead with reset time and usage
-state: active
+state: retired
 statement: Each rate-limit window card from `/api/ui` `limits` leads with the
   time until the window resets (`timeToResetHrs`) and the used percent (with a
   usage bar), both always shown; time-to-exhaustion appears only as a
@@ -14,3 +14,4 @@ depends_on:
   - ui-live-data-binding
   - rate-limit-local-estimates
 created_by: frontend-r3-rate-limit-redesign
+retired_by: frontend-p4-rate-limit-remaining

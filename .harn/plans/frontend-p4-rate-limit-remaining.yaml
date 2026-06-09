@@ -1,0 +1,40 @@
+id: frontend-p4-rate-limit-remaining
+title: Lead rate-limit cards with percent remaining and an exhaustion alert
+assumptions:
+  retire:
+    - id: ui-rate-limit-window-cards
+      reason: The card now leads with percent remaining (when not used up) rather than
+        time-to-reset, and surfaces exhaustion as an alert; the headline
+        contract changes.
+  create:
+    - id: ui-rate-limit-remaining-cards
+      title: UI rate-limit cards lead with percent remaining
+      statement: When a window is not used up (`usedPercent < 100`) the card headlines
+        the percent remaining (`100 - usedPercent`) with a usage bar, and shows
+        estimated exhaustion below as an alert when `percentTimeToExhaustHrs` is
+        sooner than `timeToResetHrs`, otherwise a calm reset note; when the
+        window is used up it headlines the time until reset with a "window
+        exhausted" sub. Burn and rolling allowance stay secondary and the
+        windows remain account-wide.
+      reason: Users want to see how much headroom is left at a glance and be alerted
+        only when a window will exhaust before it resets.
+      depends_on:
+        - ui-live-data-binding
+        - rate-limit-local-estimates
+  reviewed: []
+anchors:
+  ui-rate-limit-window-cards:
+    ui-rate-limit-view:
+      action: remove
+      reason: Re-point this region off the retired assumption.
+  ui-rate-limit-remaining-cards:
+    ui-rate-limit-view:
+      action: change
+      reason: Rewrite WindowCard to lead with percent remaining and an exhaustion
+        alert, falling back to time-to-reset when used up.
+files:
+  - src/ui/sections.jsx
+  - src/ui/styles.css
+  - frontend-dashboard-progress.md
+applied:
+  applied_at: 2026-06-09T07:10:25.452Z

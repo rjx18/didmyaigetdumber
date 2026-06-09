@@ -1,0 +1,14 @@
+id: ui-rate-limit-remaining-cards
+hash: a-26837aff4e40
+title: UI rate-limit cards lead with percent remaining
+state: active
+statement: When a window is not used up (`usedPercent < 100`) the card headlines
+  the percent remaining (`100 - usedPercent`) with a usage bar, and shows
+  estimated exhaustion below as an alert when `percentTimeToExhaustHrs` is
+  sooner than `timeToResetHrs`, otherwise a calm reset note; when the window is
+  used up it headlines the time until reset with a "window exhausted" sub. Burn
+  and rolling allowance stay secondary and the windows remain account-wide.
+depends_on:
+  - ui-live-data-binding
+  - rate-limit-local-estimates
+created_by: frontend-p4-rate-limit-remaining
