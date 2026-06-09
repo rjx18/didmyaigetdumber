@@ -259,11 +259,11 @@ function FeaturedChart({ chart, scope }) {
   );
 }
 
-// harn:assume ui-rate-limit-exhaustion-view ref=ui-rate-limit-view
-// Account-wide rate-limit windows. Lead with percent-based time-to-exhaustion (the
-// reliable figure — token allowance is not knowable per machine); burn is a current
-// KPI (no sparkline until backend backlog item 7); rolling allowance shows only when
-// the backend could estimate it (local token deltas observed).
+// harn:assume ui-rate-limit-window-cards ref=ui-rate-limit-view
+// Account-wide rate-limit windows. Lead with when the window resets and how full it
+// is (both always meaningful); time-to-exhaustion is only a conditional warning when
+// you're on pace to run out before the window resets. Token allowance is not knowable
+// per machine, so it shows only when the backend could estimate it.
 function fmtHrs(h) {
   if (h == null) return "—";
   if (h < 1) return Math.round(h * 60) + "m";
@@ -280,15 +280,26 @@ function WindowCard({ label, w }) {
       </div>
     );
   }
-  const primary = w.resetsFirst ? "resets first" : fmtHrs(w.percentTimeToExhaustHrs);
-  const sub = w.resetsFirst ? "window resets before exhaustion" : "to exhaustion at current burn";
+  const used = Math.round(w.usedPercent);
+  const exhaust = w.percentTimeToExhaustHrs;
+  const reset = w.timeToResetHrs;
+  let statusCls = "ok";
+  let statusText = "On track — resets before exhaustion.";
+  if (exhaust == null) {
+    statusCls = "muted";
+    statusText = "Burn rate unknown — not enough samples yet.";
+  } else if (reset != null && exhaust < reset) {
+    statusCls = "warn";
+    statusText = "On pace to exhaust in " + fmtHrs(exhaust) + " — before it resets.";
+  }
   return (
     <div className="lim-card">
       <div className="lim-title">{label}</div>
-      <div className="lim-primary num">{primary}</div>
-      <div className="lim-sub">{sub}</div>
-      <div className="lim-row"><span>Resets in</span><span className="num">{fmtHrs(w.timeToResetHrs)}</span></div>
-      <div className="lim-row"><span>Used</span><span className="num">{Math.round(w.usedPercent)}%</span></div>
+      <div className="lim-primary num">{fmtHrs(reset)}</div>
+      <div className="lim-sub">until reset</div>
+      <div className="lim-bar"><span style={{ width: Math.min(100, used) + "%" }} /></div>
+      <div className="lim-used"><span className="num">{used}%</span> used</div>
+      <div className={"lim-status " + statusCls}>{statusText}</div>
       <div className="lim-row"><span>Burn</span><span className="num">{w.burnPctPointsPerHour == null ? "—" : w.burnPctPointsPerHour.toFixed(1) + " pp/h"}</span></div>
       {w.localAllowanceEstimateRolling != null && (
         <div className="lim-row"><span>Allowance · 14d</span><span className="num">{FMT.tok(w.localAllowanceEstimateRolling)}</span></div>
@@ -303,8 +314,8 @@ function RateLimits() {
     <div>
       <div className="chart-head">
         <div>
-          <div className="chart-title">Time to exhaustion</div>
-          <div className="chart-sub">estimated hours until each window is exhausted at the current burn · account-wide</div>
+          <div className="chart-title">Rate-limit windows</div>
+          <div className="chart-sub">time until each window resets and how full it is · account-wide</div>
         </div>
       </div>
       <div className="lim-grid">
@@ -316,7 +327,7 @@ function RateLimits() {
           <div className="chart-head">
             <div>
               <div className="chart-title">5h window usage</div>
-              <div className="chart-sub">% of window consumed across samples toward reset · context only</div>
+              <div className="chart-sub">% of window consumed across samples toward reset</div>
             </div>
             <div className="chart-now num">{Math.round(L.windowUsedPct * 100)}%</div>
           </div>
@@ -326,7 +337,7 @@ function RateLimits() {
     </div>
   );
 }
-// harn:end ui-rate-limit-exhaustion-view
+// harn:end ui-rate-limit-window-cards
 
 function SectionDetail({ id, scope }) {
   const cfg = SECTIONS[id];

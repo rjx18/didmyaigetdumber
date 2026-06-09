@@ -1,0 +1,44 @@
+id: frontend-r3-rate-limit-redesign
+title: Redesign rate-limit window cards to lead with reset and usage
+assumptions:
+  retire:
+    - id: ui-rate-limit-exhaustion-view
+      reason: Leading the window card with time-to-exhaustion and a bare "resets
+        first" headline tested as confusing; the lead metric and copy are being
+        replaced, so the prior contract no longer holds.
+  create:
+    - id: ui-rate-limit-window-cards
+      title: UI rate-limit cards lead with reset time and usage
+      statement: Each rate-limit window card from `/api/ui` `limits` leads with the
+        time until the window resets (`timeToResetHrs`) and the used percent
+        (with a usage bar), both always shown; time-to-exhaustion appears only
+        as a conditional status line — a warning when `percentTimeToExhaustHrs`
+        is non-null and less than `timeToResetHrs` ("on pace to exhaust before
+        reset"), otherwise a reassuring "resets before exhaustion" line, and
+        "burn unknown" when there is no burn estimate; burn rate and rolling
+        allowance stay as secondary rows and the windows remain account-wide.
+      reason: Users need to see when a window resets and how full it is at a glance;
+        exhaustion is only relevant as a warning when it would happen before
+        reset.
+      depends_on:
+        - ui-live-data-binding
+        - rate-limit-local-estimates
+  reviewed: []
+anchors:
+  ui-rate-limit-exhaustion-view:
+    ui-rate-limit-view:
+      action: remove
+      reason: Re-point this region off the retired assumption; the marker id changes
+        to the new assumption.
+  ui-rate-limit-window-cards:
+    ui-rate-limit-view:
+      action: change
+      reason: Rewrite WindowCard/RateLimits to lead with reset + used bar and turn
+        exhaustion into a conditional status line; re-point the anchor to the
+        new assumption.
+files:
+  - src/ui/sections.jsx
+  - src/ui/styles.css
+  - frontend-dashboard-progress.md
+applied:
+  applied_at: 2026-06-09T04:08:24.886Z
