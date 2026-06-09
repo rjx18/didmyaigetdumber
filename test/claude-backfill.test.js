@@ -56,6 +56,7 @@ function codexFile(sessionsDir, date = '2026-06-08') {
 }
 
 // harn:assume claude-historical-backfill ref=claude-backfill-tests
+// harn:assume historical-per-model-backfill ref=claude-backfill-tests
 test('backfills sanitized Claude JSONL records into aggregate daily logs', () => {
   const baseDir = tempBase();
   const claudeProjectsDir = path.join(baseDir, 'projects');
@@ -124,6 +125,11 @@ test('backfills sanitized Claude JSONL records into aggregate daily logs', () =>
   assert.equal(log.tokens.output, 50);
   assert.equal(log.tokens.thinking_chars, 'ignored thinking text'.length);
   assert.equal(log.model_tokens['hf:moonshotai/Kimi-K2.6'].output, 50);
+  assert.equal(log.by_model['hf:moonshotai/Kimi-K2.6'].totals.user_messages, 1);
+  assert.equal(log.by_model['hf:moonshotai/Kimi-K2.6'].totals.assistant_messages, 1);
+  assert.equal(log.by_model['hf:moonshotai/Kimi-K2.6'].totals.tool_calls, 1);
+  assert.equal(log.by_model['hf:moonshotai/Kimi-K2.6'].totals.tool_failures, 1);
+  assert.equal(log.by_model['hf:moonshotai/Kimi-K2.6'].matches.user_1pt.events, 1);
   assert.equal(log.tool_calls_by_name.Bash, 1);
   assert.equal(log.tool_output_chars.Bash, 'ignored output text'.length);
   assert.equal(log.tool_failures_by_name.Bash, 1);
@@ -136,6 +142,38 @@ test('backfills sanitized Claude JSONL records into aggregate daily logs', () =>
   assert.equal(serialized.includes('ignored command text'), false);
   assert.equal(serialized.includes('ignored output text'), false);
   assert.equal(serialized.includes('ignored error text'), false);
+});
+
+test('attributes a Claude prompt to the following assistant model across midnight', () => {
+  const baseDir = tempBase();
+  const claudeProjectsDir = path.join(baseDir, 'projects');
+
+  writeJsonl(claudeFile(claudeProjectsDir), [
+    {
+      timestamp: '2026-06-08T15:59:50.000Z',
+      type: 'user',
+      message: { role: 'user', content: 'this is wrong' },
+    },
+    {
+      timestamp: '2026-06-08T16:00:10.000Z',
+      type: 'assistant',
+      message: {
+        role: 'assistant',
+        model: 'claude-next',
+        usage: { input_tokens: 10, output_tokens: 5 },
+        content: [{ type: 'text', text: 'my mistake' }],
+      },
+    },
+  ]);
+
+  const result = backfillClaude({ baseDir, claudeProjectsDir });
+  const first = readDailyLog('2026-06-08', { baseDir });
+  const second = readDailyLog('2026-06-09', { baseDir });
+
+  assert.equal(result.days, 2);
+  assert.equal(first.by_model['claude-next'].totals.user_messages, 1);
+  assert.equal(second.by_model['claude-next'].totals.assistant_messages, 1);
+  assert.equal(second.by_model['claude-next'].tokens.total, 15);
 });
 
 test('runs Claude backfill through dispatcher and init backfill flag', async () => {
@@ -240,4 +278,5 @@ test('skips Claude sessions in the didmyaigetdumber project', () => {
   assert.equal(included.files, 1);
   assert.equal(included.days, 1);
 });
+// harn:end historical-per-model-backfill
 // harn:end claude-historical-backfill

@@ -52,6 +52,7 @@ function sessionFile(sessionsDir, date = '2026-06-08') {
 }
 
 // harn:assume codex-historical-backfill ref=codex-backfill-tests
+// harn:assume historical-per-model-backfill ref=codex-backfill-tests
 test('backfills sanitized Codex JSONL records into aggregate daily logs', () => {
   const baseDir = tempBase();
   const codexSessionsDir = path.join(baseDir, 'sessions');
@@ -147,6 +148,11 @@ test('backfills sanitized Codex JSONL records into aggregate daily logs', () => 
   assert.equal(log.tokens.cache_read, 30);
   assert.equal(log.tokens.reasoning_output, 8);
   assert.equal(log.model_tokens['gpt-5.4'].total, 190);
+  assert.equal(log.by_model['gpt-5.4'].totals.user_messages, 1);
+  assert.equal(log.by_model['gpt-5.4'].totals.assistant_messages, 1);
+  assert.equal(log.by_model['gpt-5.4'].totals.tool_calls, 2);
+  assert.equal(log.by_model['gpt-5.4'].matches.user_1pt.events, 1);
+  assert.equal(log.by_model['gpt-5.4'].matches.assistant_1pt.events, 1);
   assert.equal(log.tool_calls_by_name.tool, 1);
   assert.equal(log.tool_calls_by_name.web_search, 1);
   assert.equal(log.tool_output_chars.tool, 'ignored output text'.length);
@@ -154,12 +160,41 @@ test('backfills sanitized Codex JSONL records into aggregate daily logs', () => 
   assert.equal(log.timings_ms.tool_latency_count, 1);
   assert.equal(log.windows[0].kind, '5h');
   assert.equal(log.windows[0].tokens_in_window, 190);
+  assert.equal(log.windows[0].observed_tokens_delta, 190);
   assert.equal(log.totals.turns, 1);
   assert.equal(serialized.includes("don't want"), false);
   assert.equal(serialized.includes('good catch'), false);
   assert.equal(serialized.includes('ignored command text'), false);
   assert.equal(serialized.includes('ignored output text'), false);
   assert.equal(serialized.includes('/private/project'), false);
+});
+
+test('partitions Codex backfill metrics across dates while keeping the session global', () => {
+  const baseDir = tempBase();
+  const codexSessionsDir = path.join(baseDir, 'sessions');
+
+  writeJsonl(sessionFile(codexSessionsDir), [
+    { timestamp: '2026-06-08T15:59:00.000Z', type: 'session_meta', payload: {} },
+    { timestamp: '2026-06-08T15:59:10.000Z', type: 'turn_context', payload: { model: 'gpt-5.4' } },
+    { timestamp: '2026-06-08T15:59:20.000Z', type: 'event_msg', payload: { type: 'task_started' } },
+    {
+      timestamp: '2026-06-08T16:00:10.000Z',
+      type: 'event_msg',
+      payload: { type: 'token_count', info: { last_token_usage: { input_tokens: 10, total_tokens: 10 } } },
+    },
+    { timestamp: '2026-06-08T16:00:20.000Z', type: 'event_msg', payload: { type: 'task_complete' } },
+  ]);
+
+  const result = backfillCodex({ baseDir, codexSessionsDir });
+  const first = readDailyLog('2026-06-08', { baseDir });
+  const second = readDailyLog('2026-06-09', { baseDir });
+
+  assert.equal(result.days, 2);
+  assert.equal(first.totals.sessions, 1);
+  assert.equal(first.tokens.total, 0);
+  assert.equal(second.totals.sessions, 0);
+  assert.equal(second.tokens.total, 10);
+  assert.equal(second.by_model['gpt-5.4'].totals.turns, 1);
 });
 
 test('runs Codex backfill through dispatcher and init backfill flag', async () => {
@@ -235,4 +270,5 @@ test('skips Codex sessions whose cwd is the didmyaigetdumber repo', () => {
   assert.equal(included.files, 1);
   assert.equal(included.days, 1);
 });
+// harn:end historical-per-model-backfill
 // harn:end codex-historical-backfill

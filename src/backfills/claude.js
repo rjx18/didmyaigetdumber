@@ -6,8 +6,9 @@ const path = require('path');
 const { incrementFromEvent } = require('../events');
 const { emptyIncrement, localDate } = require('../log-store');
 const { matchPatterns, loadPatterns } = require('../patterns');
-const { groupIncrement, writeBackfillDays } = require('../backfill');
-const { extractClaudeMetrics } = require('../extractors/claude');
+const { groupIncrement, mergeDayMaps, withModelAttribution, writeBackfillDays } = require('../backfill');
+const { extractClaudeMetricsByDate } = require('../extractors/claude');
+const { modelKey } = require('../extractors/common');
 
 const SELF_PROJECT_PATTERN = /didmyaigetdumber/i;
 
@@ -110,19 +111,6 @@ function runtimeIncrement() {
   return countedIncrement('runtime_interrupts', 1);
 }
 
-function hasMetricData(increment) {
-  return increment.totals.turns > 0
-    || increment.totals.compactions > 0
-    || Object.values(increment.tokens).some((value) => value > 0)
-    || Object.keys(increment.tool_output_chars).length > 0
-    || Object.keys(increment.tool_calls_by_name).length > 0
-    || Object.keys(increment.tool_failures_by_name).length > 0
-    || Object.keys(increment.model_tokens).length > 0
-    || Object.values(increment.timings_ms).some((value) => value > 0)
-    || Object.keys(increment.tool_latency_ms_by_name).length > 0
-    || increment.windows.length > 0;
-}
-
 // harn:assume claude-historical-backfill ref=claude-backfill-parser
 function collectClaudeBackfill(options = {}) {
   const projectsDir = options.claudeProjectsDir || options.projectsDir || defaultClaudeProjectsDir();
@@ -150,6 +138,14 @@ function collectClaudeBackfill(options = {}) {
     let sessionDate = fallbackDate;
     let countableRecords = 0;
     const parsedRecords = [];
+    const pendingUsers = [];
+    const toolModelById = new Map();
+
+    function flushPendingUsers(model = 'unknown') {
+      for (const pending of pendingUsers.splice(0)) {
+        groupIncrement(dayMap, pending.date, withModelAttribution(pending.increment, model));
+      }
+    }
 
     summary.files += 1;
     for (const line of fs.readFileSync(filePath, 'utf8').split(/\r?\n/)) {
@@ -173,28 +169,43 @@ function collectClaudeBackfill(options = {}) {
 
       if (record.type === 'user' && message.role === 'user') {
         const text = visibleText(message);
-        const failures = countErroredToolResults(message);
         if (text) {
-          groupIncrement(dayMap, date, textIncrement('user', record.type, text, patterns));
+          pendingUsers.push({ date, increment: textIncrement('user', record.type, text, patterns) });
           countableRecords += 1;
         }
-        if (failures > 0) {
-          groupIncrement(dayMap, date, countedIncrement('tool_failures', failures));
-          countableRecords += failures;
+        for (const item of contentItems(message)) {
+          if (!item || item.type !== 'tool_result' || item.is_error !== true) {
+            continue;
+          }
+          groupIncrement(dayMap, date, withModelAttribution(
+            countedIncrement('tool_failures', 1),
+            toolModelById.get(item.tool_use_id || item.id) || 'unknown'
+          ));
+          countableRecords += 1;
         }
         continue;
       }
 
       if (record.type === 'assistant' && message.role === 'assistant') {
+        const model = modelKey(message.model);
+        flushPendingUsers(model);
         const text = visibleText(message);
         const toolCalls = countContentType(message, 'tool_use');
         if (text) {
-          groupIncrement(dayMap, date, textIncrement('assistant', record.type, text, patterns));
+          groupIncrement(dayMap, date, withModelAttribution(
+            textIncrement('assistant', record.type, text, patterns),
+            model
+          ));
           countableRecords += 1;
         }
         if (toolCalls > 0) {
-          groupIncrement(dayMap, date, countedIncrement('tool_calls', toolCalls));
+          groupIncrement(dayMap, date, withModelAttribution(countedIncrement('tool_calls', toolCalls), model));
           countableRecords += toolCalls;
+        }
+        for (const item of contentItems(message)) {
+          if (item && item.type === 'tool_use' && (item.id || item.tool_use_id)) {
+            toolModelById.set(item.id || item.tool_use_id, model);
+          }
         }
         continue;
       }
@@ -208,13 +219,13 @@ function collectClaudeBackfill(options = {}) {
     if (countableRecords > 0) {
       groupIncrement(dayMap, sessionDate || localDate(), sessionIncrement());
     }
+    flushPendingUsers('unknown');
 
-    // harn:assume historical-backfill-numeric-metrics ref=claude-backfill-metrics
-    const metricsIncrement = extractClaudeMetrics(parsedRecords);
-    if (hasMetricData(metricsIncrement)) {
-      groupIncrement(dayMap, sessionDate || fallbackDate || localDate(), metricsIncrement);
-    }
-    // harn:end historical-backfill-numeric-metrics
+    // harn:assume historical-per-model-backfill ref=claude-backfill-metrics
+    mergeDayMaps(dayMap, extractClaudeMetricsByDate(parsedRecords, {
+      fallbackDate: sessionDate || fallbackDate || localDate(),
+    }));
+    // harn:end historical-per-model-backfill
   }
 
   return { dayMap, summary };

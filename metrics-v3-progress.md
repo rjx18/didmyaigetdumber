@@ -17,7 +17,9 @@
 <!-- harn:assume date-scoped-transcript-metrics ref=progress-phase-b2 -->
 | B2. Date-scoped, model-aware extraction | `metrics-v3-phase-b2-extractors` | complete | phase commit | Partitioned metrics by record date and attributed turn-owned metrics. |
 <!-- harn:end date-scoped-transcript-metrics -->
-| B3. Historical backfill integration | `metrics-v3-phase-b3-backfill` | planned | — | |
+<!-- harn:assume historical-per-model-backfill ref=progress-phase-b3 -->
+| B3. Historical backfill integration | `metrics-v3-phase-b3-backfill` | complete | phase commit | Merged date-scoped metrics and model-attributed counters during backfill. |
+<!-- harn:end historical-per-model-backfill -->
 | B4. Live-tail integration and reconciliation | `metrics-v3-phase-b4-live-tail` | planned | — | |
 | B5. Aggregation core + rate-limit correction | `metrics-v3-phase-b5-aggregation` | planned | — | |
 | B6. UI API model views + rolling status | `metrics-v3-phase-b6-ui-api` | planned | — | |

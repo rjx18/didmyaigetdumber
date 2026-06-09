@@ -6,7 +6,9 @@ const {
   createDailyLog,
   dailyLogPath,
   emptyIncrement,
+  emptyModelSlice,
   mergeIncrementFields,
+  mergeModelSlice,
   writeDailyLogAtomic,
   withDailyLogLock,
 } = require('./log-store');
@@ -15,6 +17,15 @@ const {
 function mergeIncrement(target, increment) {
   return mergeIncrementFields(target, increment);
 }
+
+// harn:assume historical-per-model-backfill ref=backfill-attribution
+function withModelAttribution(increment, model) {
+  const key = model || 'unknown';
+  increment.by_model[key] ||= emptyModelSlice();
+  mergeModelSlice(increment.by_model[key], increment);
+  return increment;
+}
+// harn:end historical-per-model-backfill
 
 function groupIncrement(dayMap, date, increment) {
   const current = dayMap.get(date) || emptyIncrement();
@@ -99,6 +110,8 @@ async function runBackfill(target, options, io) {
 module.exports = {
   dailyLogFromIncrement,
   groupIncrement,
+  mergeDayMaps,
   runBackfill,
+  withModelAttribution,
   writeBackfillDays,
 };

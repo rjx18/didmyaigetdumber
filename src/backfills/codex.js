@@ -6,8 +6,9 @@ const path = require('path');
 const { incrementFromEvent } = require('../events');
 const { emptyIncrement, localDate } = require('../log-store');
 const { matchPatterns, loadPatterns } = require('../patterns');
-const { groupIncrement, writeBackfillDays } = require('../backfill');
-const { extractCodexMetrics } = require('../extractors/codex');
+const { groupIncrement, mergeDayMaps, withModelAttribution, writeBackfillDays } = require('../backfill');
+const { extractCodexMetricsByDate } = require('../extractors/codex');
+const { modelKey } = require('../extractors/common');
 
 const SELF_PROJECT_PATTERN = /didmyaigetdumber/i;
 
@@ -120,19 +121,6 @@ function sessionIncrement() {
   return increment;
 }
 
-function hasMetricData(increment) {
-  return increment.totals.turns > 0
-    || increment.totals.compactions > 0
-    || Object.values(increment.tokens).some((value) => value > 0)
-    || Object.keys(increment.tool_output_chars).length > 0
-    || Object.keys(increment.tool_calls_by_name).length > 0
-    || Object.keys(increment.tool_failures_by_name).length > 0
-    || Object.keys(increment.model_tokens).length > 0
-    || Object.values(increment.timings_ms).some((value) => value > 0)
-    || Object.keys(increment.tool_latency_ms_by_name).length > 0
-    || increment.windows.length > 0;
-}
-
 function shouldCountToolCall(payload = {}) {
   return payload.type === 'function_call'
     || payload.type === 'custom_tool_call'
@@ -169,6 +157,14 @@ function collectCodexBackfill(options = {}) {
     let sessionCounted = false;
     let countableRecords = 0;
     const parsedRecords = [];
+    let currentModel = 'unknown';
+    const pendingUsers = [];
+
+    function flushPendingUsers(model = 'unknown') {
+      for (const pending of pendingUsers.splice(0)) {
+        groupIncrement(dayMap, pending.date, withModelAttribution(pending.increment, model));
+      }
+    }
 
     summary.files += 1;
     for (const line of lines) {
@@ -190,6 +186,12 @@ function collectCodexBackfill(options = {}) {
       const date = recordDate(record, filePath, fallbackDate);
       sessionDate ||= date;
 
+      if (record.type === 'turn_context' || payload.type === 'turn_context') {
+        currentModel = modelKey(payload.model || record.model);
+        flushPendingUsers(currentModel);
+        continue;
+      }
+
       if (record.type === 'session_meta' && !sessionCounted) {
         groupIncrement(dayMap, date, sessionIncrement());
         sessionCounted = true;
@@ -198,20 +200,31 @@ function collectCodexBackfill(options = {}) {
 
       if (record.type === 'event_msg' && payload.type === 'user_message') {
         const text = firstString(payload.message, payload.text);
-        groupIncrement(dayMap, date, textIncrement('user', payload.type, text, patterns));
+        const increment = textIncrement('user', payload.type, text, patterns);
+        if (currentModel === 'unknown') {
+          pendingUsers.push({ date, increment });
+        } else {
+          groupIncrement(dayMap, date, withModelAttribution(increment, currentModel));
+        }
         countableRecords += 1;
         continue;
       }
 
       if (record.type === 'event_msg' && payload.type === 'agent_message') {
         const text = firstString(payload.message, payload.text);
-        groupIncrement(dayMap, date, textIncrement('assistant', payload.type, text, patterns));
+        groupIncrement(dayMap, date, withModelAttribution(
+          textIncrement('assistant', payload.type, text, patterns),
+          currentModel
+        ));
         countableRecords += 1;
         continue;
       }
 
       if (record.type === 'response_item' && shouldCountToolCall(payload)) {
-        groupIncrement(dayMap, date, flagIncrement(payload.type, { tool_call: true }));
+        groupIncrement(dayMap, date, withModelAttribution(
+          flagIncrement(payload.type, { tool_call: true }),
+          currentModel
+        ));
         countableRecords += 1;
         continue;
       }
@@ -225,13 +238,13 @@ function collectCodexBackfill(options = {}) {
     if (!sessionCounted && countableRecords > 0) {
       groupIncrement(dayMap, sessionDate || localDate(), sessionIncrement());
     }
+    flushPendingUsers('unknown');
 
-    // harn:assume historical-backfill-numeric-metrics ref=codex-backfill-metrics
-    const metricsIncrement = extractCodexMetrics(parsedRecords);
-    if (hasMetricData(metricsIncrement)) {
-      groupIncrement(dayMap, sessionDate || fallbackDate || localDate(), metricsIncrement);
-    }
-    // harn:end historical-backfill-numeric-metrics
+    // harn:assume historical-per-model-backfill ref=codex-backfill-metrics
+    mergeDayMaps(dayMap, extractCodexMetricsByDate(parsedRecords, {
+      fallbackDate: sessionDate || fallbackDate || localDate(),
+    }));
+    // harn:end historical-per-model-backfill
   }
 
   return { dayMap, summary };

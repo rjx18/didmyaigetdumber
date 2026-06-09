@@ -1,0 +1,16 @@
+id: historical-per-model-backfill
+hash: a-196474b00382
+title: Historical per-model backfill
+state: active
+statement: Codex and Claude historical backfill merge date-scoped transcript
+  metrics and defensibly attributed message, friction, and tool counters into
+  schema v3 daily logs, while sessions and unresolved ownership remain global or
+  explicit `unknown`, so overwrite backfill can rebuild available per-model
+  history without raw content.
+depends_on:
+  - date-scoped-transcript-metrics
+  - turn-model-attribution
+  - backfill-idempotent-writes
+  - per-model-daily-log-schema
+  - local-aggregate-privacy
+created_by: metrics-v3-phase-b3-backfill

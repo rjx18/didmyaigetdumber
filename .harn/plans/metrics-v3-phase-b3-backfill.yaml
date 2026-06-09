@@ -1,0 +1,107 @@
+id: metrics-v3-phase-b3-backfill
+title: Integrate date-scoped per-model historical backfill
+assumptions:
+  retire:
+    - id: historical-backfill-numeric-metrics
+      reason: Historical backfill now consumes date-scoped schema v3 extraction and
+        attributes message, friction, and tool counters by model.
+  create:
+    - id: historical-per-model-backfill
+      title: Historical per-model backfill
+      statement: Codex and Claude historical backfill merge date-scoped transcript
+        metrics and defensibly attributed message, friction, and tool counters
+        into schema v3 daily logs, while sessions and unresolved ownership
+        remain global or explicit `unknown`, so overwrite backfill can rebuild
+        available per-model history without raw content.
+      reason: Historical transcripts are the deterministic source for rebuilding
+        per-model daily metrics and locally summed window token deltas.
+      depends_on:
+        - date-scoped-transcript-metrics
+        - turn-model-attribution
+        - backfill-idempotent-writes
+        - per-model-daily-log-schema
+        - local-aggregate-privacy
+  reviewed:
+    - id: codex-historical-backfill
+      outcome: unchanged
+      reason: Codex backfill still discovers, excludes, parses, groups, and writes
+        historical sessions.
+    - id: claude-historical-backfill
+      outcome: unchanged
+      reason: Claude backfill still discovers, excludes, parses, groups, and writes
+        historical sessions.
+    - id: backfill-idempotent-writes
+      outcome: unchanged
+      reason: Backfill still skips existing logs unless overwrite is requested.
+    - id: metrics-end-to-end-verification
+      outcome: unchanged
+      reason: End-to-end parity remains valid until live tail adopts date-scoped
+        output in B4.
+    - id: local-aggregate-privacy
+      outcome: unchanged
+      reason: Backfill persists only aggregate counters and safe labels.
+anchors:
+  historical-backfill-numeric-metrics:
+    codex-backfill-metrics:
+      action: remove
+      reason: Replace session-date numeric merge with date-scoped per-model merge.
+    claude-backfill-metrics:
+      action: remove
+      reason: Replace session-date numeric merge with date-scoped per-model merge.
+    progress-phase-3:
+      action: remove
+      reason: Retire the old extractor progress anchor.
+    progress-phase-4:
+      action: remove
+      reason: Replace the schema v2 backfill progress contract.
+  historical-per-model-backfill:
+    backfill-attribution:
+      action: change
+      reason: Add shared model-only attribution helper.
+    codex-backfill-metrics:
+      action: change
+      reason: Merge date-scoped Codex metrics and model-attributed counters.
+    claude-backfill-metrics:
+      action: change
+      reason: Merge date-scoped Claude metrics and model-attributed counters.
+    codex-backfill-tests:
+      action: change
+      reason: Verify Codex per-model and cross-day historical output.
+    claude-backfill-tests:
+      action: change
+      reason: Verify Claude per-model and cross-day historical output.
+    progress-phase-b3:
+      action: change
+      reason: Track B3 completion.
+    progress-phase-4:
+      action: change
+      reason: Track replacement historical backfill contract.
+  codex-historical-backfill:
+    codex-backfill-parser:
+      action: change
+      reason: Track turn context and merge date-scoped metrics.
+    codex-backfill-tests:
+      action: change
+      reason: Extend Codex backfill coverage.
+  claude-historical-backfill:
+    claude-backfill-parser:
+      action: change
+      reason: Resolve pending user prompts and tools to assistant models.
+    claude-backfill-tests:
+      action: change
+      reason: Extend Claude backfill coverage.
+  backfill-idempotent-writes:
+    backfill-write-core:
+      action: change
+      reason: Add a shared model-only increment helper without changing write
+        semantics.
+files:
+  - src/backfill.js
+  - src/backfills/codex.js
+  - src/backfills/claude.js
+  - test/codex-backfill.test.js
+  - test/claude-backfill.test.js
+  - metrics-hooks-backend-progress.md
+  - metrics-v3-progress.md
+applied:
+  applied_at: 2026-06-09T01:24:09.283Z

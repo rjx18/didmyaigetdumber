@@ -1,7 +1,7 @@
 id: historical-backfill-numeric-metrics
 hash: a-444576e635e3
 title: Historical backfill numeric metrics
-state: active
+state: retired
 statement: Codex and Claude historical backfill run the shared numeric
   transcript extractors over parsed JSONL records and merge the resulting schema
   v2 increments into the same date-grouped daily writes as existing pattern
@@ -13,3 +13,4 @@ depends_on:
   - daily-metrics-log-schema
   - local-aggregate-privacy
 created_by: metrics-phase-4-backfill-metrics
+retired_by: metrics-v3-phase-b3-backfill
