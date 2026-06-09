@@ -1,0 +1,37 @@
+id: frontend-fe-b-rolling-status
+title: Render server-computed status and rolling KPIs in the dashboard hero
+assumptions:
+  retire: []
+  create:
+    - id: ui-rolling-status-rendering
+      title: UI renders server-computed status and rolling KPIs
+      statement: The dashboard's system-status verdict and headline-KPI values and
+        deltas are read from the server-computed `/api/ui` `all.status` and
+        `all.rolling` (14-day current-vs-previous windows), not recomputed
+        client-side from the raw daily series; the status hero renders the
+        `healthy`/`degraded`/`insufficient-data` verdict from `status.signals`,
+        derives its narrative from the degraded signals and the friction rolling
+        trend, and shows the real loaded date range instead of hardcoded copy.
+      reason: Per-day last-value math flips the verdict on a single sparse day and the
+        hero shipped hardcoded range/timestamp text; the backend already
+        computes a stable 14-day rolling verdict and trend that the UI must
+        surface instead.
+      depends_on:
+        - ui-live-data-binding
+        - rolling-status-metrics-api
+  reviewed: []
+anchors:
+  ui-rolling-status-rendering:
+    ui-status-hero:
+      action: change
+      reason: Replace client computeStatus and hardcoded hero meta with all.status
+        verdict/signals and all.rolling friction trend over the real range.
+    ui-rolling-kpis:
+      action: change
+      reason: Drive each KPI headline and delta from all.rolling (14-day) instead of
+        H.last/H.delta over the raw daily series.
+files:
+  - src/ui/sections.jsx
+  - frontend-dashboard-progress.md
+applied:
+  applied_at: 2026-06-09T03:15:23.979Z

@@ -2,67 +2,107 @@
 const D = window.DATA;
 const H = D.helpers;
 
-/* ---------------- status ---------------- */
-function computeStatus() {
-  const fr = H.last(D.friction.total);
-  const frDelta = H.delta(D.friction.total, 7);
-  const cache = H.last(D.cache.hit);
-  const toolErr = D.tools.mix.reduce((a, t) => a + t.count * t.errRate, 0) / D.tools.mix.reduce((a, t) => a + t.count, 0);
-  const degraded = fr > 8.5 || cache < 0.6 || toolErr > 0.09;
-  return { ok: !degraded, frDelta };
+/* ---------------- status (server-computed) ---------------- */
+// harn:assume ui-rolling-status-rendering ref=ui-status-hero
+const VERDICT_WORD = { healthy: "Healthy", degraded: "Degraded", "insufficient-data": "Insufficient data" };
+const SIGNAL_LABEL = { friction: "friction", cache: "cache hit", toolError: "tool error rate" };
+
+// Narrative derived from the API status signals + the 14-day friction rolling trend.
+function statusReason(status, rolling) {
+  if (status.verdict === "insufficient-data") {
+    return "Not enough recent activity to judge — run more sessions or widen the range.";
+  }
+  const fr = (rolling && rolling.friction) || {};
+  const frPct = fr.changeRatio == null ? null : Math.round(fr.changeRatio * 100);
+  const trend = frPct == null ? "" :
+    frPct > 0 ? ` Friction is climbing (+${frPct}% over 14d) and is worth watching.` :
+    frPct < 0 ? ` Friction is easing (${frPct}% over 14d).` : "";
+  const bad = Object.keys(status.signals).filter((k) => status.signals[k].degraded);
+  if (bad.length === 0) return "All core signals within range." + trend;
+  return "Above threshold: " + bad.map((k) => SIGNAL_LABEL[k] || k).join(" · ") + "." + trend;
+}
+
+function rangeLabel() {
+  const n = D.days.length;
+  const end = n ? D.days[n - 1] : null;
+  const gran = (D.range && D.range.granularity) || "day";
+  return {
+    span: n + (gran === "1h" ? " hours" : " days"),
+    through: end ? end.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—",
+  };
 }
 
 function Hero() {
-  const s = computeStatus();
-  const word = s.ok ? "Healthy" : "Degraded";
+  const status = D.all.status;
+  const ok = status.verdict === "healthy";
+  const word = VERDICT_WORD[status.verdict] || "Unknown";
+  const pulse = ok ? "ok ok-bg" : status.verdict === "degraded" ? "bad bad-bg" : "";
+  const r = rangeLabel();
   return (
     <div className="hero">
       <div>
         <div className="status-label">System status</div>
         <div className="status-line">
-          <span className={"status-pulse " + (s.ok ? "ok ok-bg" : "bad bad-bg")} />
+          <span className={"status-pulse " + pulse} />
           <span className="status-word">{word}</span>
         </div>
-        <div className="status-reason">
-          All core signals within range. <b>Friction is climbing</b> ({(s.frDelta * 100).toFixed(0)}% over 7d) and is the one metric worth watching — everything else is steady.
-        </div>
+        <div className="status-reason">{statusReason(status, D.all.rolling)}</div>
       </div>
       <div className="status-meta">
-        <div>last 90 days · live</div>
-        <div>updated <span className="num">2 min ago</span></div>
-        <div className="num" style={{ marginTop: 8, fontSize: 11, color: "var(--faint)" }}>JUN 9 2026 · 09:14 UTC</div>
+        <div>last {r.span} · live</div>
+        <div>through <span className="num">{r.through}</span></div>
       </div>
     </div>
   );
 }
+// harn:end ui-rolling-status-rendering
 
 /* ---------------- headline metrics (clickable → route) ---------------- */
+// harn:assume ui-rolling-status-rendering ref=ui-rolling-kpis
+// `roll` keys into D.all.rolling (14-day window); `rollFx` maps rolling.current into
+// the unit the `fmt` expects (rolling friction/timing are ratios/ms). The sparkline
+// keeps the raw per-day `values` series.
 const KPI_LIST = [
-  { label: "Friction rate", values: D.friction.total, fmt: "pct1", goodDir: "down", section: "friction" },
-  { label: "Tokens / day", values: D.tokens.total, fmt: "tok", goodDir: null, section: "tokens" },
-  { label: "Cache hit", values: D.cache.hit, fmt: "ratio", goodDir: "up", section: "cache" },
-  { label: "Tools / msg", values: D.tools.perMsg, fmt: "num2", goodDir: null, section: "tools" },
-  { label: "Avg turn", values: D.timing.turnDuration, fmt: "sec", goodDir: "down", section: "timing" },
-  { label: "Throughput", values: D.timing.throughput, fmt: (v) => v.toFixed(0), unit: " tok/s", goodDir: "up", section: "timing" },
-  { label: "Time to first token", values: D.timing.ttft, fmt: "ms", goodDir: "down", section: "timing" },
-  { label: "Reasoning share", values: D.reasoning.codex, fmt: "ratio", goodDir: null, section: "reasoning" },
+  { label: "Friction rate", values: D.friction.total, roll: "friction", rollFx: (v) => v * 100, fmt: "pct1", goodDir: "down", section: "friction" },
+  { label: "Tokens / day", values: D.tokens.total, roll: "tokensPerDay", fmt: "tok", goodDir: null, section: "tokens" },
+  { label: "Cache hit", values: D.cache.hit, roll: "cacheHit", fmt: "ratio", goodDir: "up", section: "cache" },
+  { label: "Tools / msg", values: D.tools.perMsg, roll: "toolsPerMessage", fmt: "num2", goodDir: null, section: "tools" },
+  { label: "Avg turn", values: D.timing.turnDuration, roll: "avgTurnMs", rollFx: (v) => v / 1000, fmt: "sec", goodDir: "down", section: "timing" },
+  { label: "Throughput", values: D.timing.throughput, roll: "throughput", fmt: (v) => v.toFixed(0), unit: " tok/s", goodDir: "up", section: "timing" },
+  { label: "Time to first token", values: D.timing.ttft, roll: "avgTtftMs", fmt: "ms", goodDir: "down", section: "timing" },
+  { label: "Reasoning share", values: D.reasoning.codex, roll: "reasoningShare", fmt: "ratio", goodDir: null, section: "reasoning" },
 ];
+
+// Delta badge fed by the 14-day rolling changeRatio (current vs previous window).
+function RollDelta({ ratio, goodDir }) {
+  const dv = ratio == null ? 0 : ratio;
+  const arrow = dv > 0.001 ? "↑" : dv < -0.001 ? "↓" : "→";
+  let cls = "flat";
+  if (goodDir && Math.abs(dv) > 0.002) {
+    const dir = dv > 0 ? "up" : "down";
+    cls = dir + "-" + (dir === goodDir ? "good" : "bad");
+  }
+  const sign = dv > 0 ? "+" : "";
+  return <span className={"delta " + cls}>{arrow} {sign}{(dv * 100).toFixed(1)}%</span>;
+}
 
 function KPI({ item, onPick }) {
   const fmtFn = typeof item.fmt === "function" ? item.fmt : FMT[item.fmt];
-  const cur = H.last(item.values);
+  const r = D.all.rolling[item.roll] || { current: 0, changeRatio: 0 };
+  const cur = item.rollFx ? item.rollFx(r.current) : r.current;
   return (
     <button className="kpi" onClick={() => onPick(item.section)}>
       <div className="k-label">{item.label}</div>
       <div className="k-value num">{fmtFn(cur)}{item.unit && <span className="unit">{item.unit}</span>}</div>
       <div className="k-foot">
         <div className="k-spark"><Spark values={item.values} color="ghost" height={30} /></div>
-        <Delta values={item.values} goodDir={item.goodDir} />
+        <RollDelta ratio={r.changeRatio} goodDir={item.goodDir} />
       </div>
       <div className="k-more">See more <span className="arr">→</span></div>
     </button>
   );
 }
+// harn:end ui-rolling-status-rendering
 
 function HeadlineMetrics({ onPick }) {
   return (
