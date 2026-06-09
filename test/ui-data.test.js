@@ -8,6 +8,8 @@ const test = require('node:test');
 
 const { bucketKey, buildUiData } = require('../src/ui-data');
 const { createDailyLog, writeDailyLog } = require('../src/log-store');
+const { createHourlyLog, updateHourlyLog, writeHourlyLogAtomic } = require('../src/hourly-store');
+const { emptyIncrement } = require('../src/log-store');
 
 function tempBase() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'didmyaigetdumber-'));
@@ -181,3 +183,30 @@ test('uses stable ISO week, two-week, and month bucket keys', () => {
 });
 // harn:end granularity-bucketing-api
 // harn:end rolling-status-metrics-api
+
+// harn:assume sub-daily-hourly-storage ref=hourly-api-tests
+test('builds a bounded 1h series from hourly aggregate storage', () => {
+  const baseDir = tempBase();
+  const first = emptyIncrement();
+  first.totals.user_messages = 2;
+  first.tokens.total = 100;
+  const second = emptyIncrement();
+  second.totals.user_messages = 1;
+  second.tokens.total = 50;
+  const now = new Date('2026-06-09T12:00:00');
+  updateHourlyLog('2026-06-09T10', first, { baseDir, now });
+  updateHourlyLog('2026-06-09T11', second, { baseDir, now });
+  writeHourlyLogAtomic(createHourlyLog('2026-06-10T00'), { baseDir });
+
+  const data = buildUiData({ baseDir, days: 30, asOf: '2026-06-09', granularity: '1h', now });
+
+  assert.equal(data.range.granularity, '1h');
+  assert.equal(data.range.requestedDays, 30);
+  assert.equal(data.range.days, 7);
+  assert.equal(data.days.length, 168);
+  assert.equal(data.N, 2);
+  assert.equal(data.tokens.total[data.days.indexOf('2026-06-09T10')], 100);
+  assert.equal(data.tokens.total[data.days.indexOf('2026-06-09T11')], 50);
+  assert.equal(buildUiData({ baseDir, days: 1, granularity: '1h', now }).range.end, '2026-06-09T23');
+});
+// harn:end sub-daily-hourly-storage

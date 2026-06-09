@@ -8,6 +8,7 @@ const {
   contentLength,
   durationMs,
   incrementForDate,
+  incrementForHour,
   incrementToolCall,
   incrementToolFailure,
   incrementToolOutput,
@@ -72,8 +73,11 @@ function addToolLatency(increment, name, latency, model) {
 
 // harn:assume date-scoped-transcript-metrics ref=claude-extractor
 // harn:assume turn-model-attribution ref=claude-extractor
-function extractClaudeMetricsByDate(records = [], options = {}) {
-  const dayMap = new Map();
+function extractClaudeMetricsByBucket(records = [], options = {}) {
+  const bucketMap = new Map();
+  const incrementForBucket = options.bucket === 'hour'
+    ? (timestamp) => incrementForHour(bucketMap, timestamp, options.fallbackHour)
+    : (timestamp) => incrementForDate(bucketMap, timestamp, options.fallbackDate);
   const state = {
     lastUserAt: '',
     currentModel: 'unknown',
@@ -88,7 +92,7 @@ function extractClaudeMetricsByDate(records = [], options = {}) {
     const message = messageOf(record);
 
     if (record.type === 'system' && isCompactionRecord(record)) {
-      incrementForDate(dayMap, timestamp, options.fallbackDate).totals.compactions += 1;
+      incrementForBucket(timestamp).totals.compactions += 1;
       continue;
     }
 
@@ -98,7 +102,7 @@ function extractClaudeMetricsByDate(records = [], options = {}) {
         state.lastUserAt = timestamp;
       }
       for (const result of results) {
-        const increment = incrementForDate(dayMap, timestamp, options.fallbackDate);
+        const increment = incrementForBucket(timestamp);
         const id = result.tool_use_id || result.id;
         const tool = state.toolUseById.get(id) || { name: 'tool', model: 'unknown' };
         incrementToolOutput(increment, tool.name, result.content, tool.model);
@@ -111,7 +115,7 @@ function extractClaudeMetricsByDate(records = [], options = {}) {
     }
 
     if (record.type === 'assistant' && message.role === 'assistant') {
-      const increment = incrementForDate(dayMap, timestamp, options.fallbackDate);
+      const increment = incrementForBucket(timestamp);
       const model = modelKey(message.model || state.currentModel);
       state.currentModel = model;
       addTokenUsage(increment, usageWithContentChars(message), model);
@@ -140,7 +144,7 @@ function extractClaudeMetricsByDate(records = [], options = {}) {
     }
 
     if (record.type === 'progress') {
-      const increment = incrementForDate(dayMap, timestamp, options.fallbackDate);
+      const increment = incrementForBucket(timestamp);
       addDuration(
         increment,
         'generation_sum',
@@ -151,7 +155,15 @@ function extractClaudeMetricsByDate(records = [], options = {}) {
     }
   }
 
-  return dayMap;
+  return bucketMap;
+}
+
+function extractClaudeMetricsByDate(records = [], options = {}) {
+  return extractClaudeMetricsByBucket(records, options);
+}
+
+function extractClaudeMetricsByHour(records = [], options = {}) {
+  return extractClaudeMetricsByBucket(records, { ...options, bucket: 'hour' });
 }
 
 function extractClaudeMetrics(records = [], options = {}) {
@@ -163,5 +175,6 @@ function extractClaudeMetrics(records = [], options = {}) {
 module.exports = {
   extractClaudeMetrics,
   extractClaudeMetricsByDate,
+  extractClaudeMetricsByHour,
   usageWithContentChars,
 };

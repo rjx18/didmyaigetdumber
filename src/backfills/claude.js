@@ -6,9 +6,9 @@ const path = require('path');
 const { incrementFromEvent } = require('../events');
 const { emptyIncrement, localDate } = require('../log-store');
 const { matchPatterns, loadPatterns } = require('../patterns');
-const { groupIncrement, mergeDayMaps, withModelAttribution, writeBackfillDays } = require('../backfill');
-const { extractClaudeMetricsByDate } = require('../extractors/claude');
-const { modelKey } = require('../extractors/common');
+const { groupIncrement, mergeDayMaps, withModelAttribution, writeBackfillDays, writeBackfillHours } = require('../backfill');
+const { extractClaudeMetricsByDate, extractClaudeMetricsByHour } = require('../extractors/claude');
+const { hourKey, modelKey } = require('../extractors/common');
 
 const SELF_PROJECT_PATTERN = /didmyaigetdumber/i;
 
@@ -121,6 +121,7 @@ function collectClaudeBackfill(options = {}) {
   };
   const excludeProject = options.excludeProject === undefined ? SELF_PROJECT_PATTERN : options.excludeProject;
   const dayMap = new Map();
+  const hourMap = new Map();
   const summary = {
     files: 0,
     records: 0,
@@ -136,6 +137,7 @@ function collectClaudeBackfill(options = {}) {
 
     const fallbackDate = dateFromFilePath(filePath);
     let sessionDate = fallbackDate;
+    let sessionHour = '';
     let countableRecords = 0;
     const parsedRecords = [];
     const pendingUsers = [];
@@ -143,8 +145,15 @@ function collectClaudeBackfill(options = {}) {
 
     function flushPendingUsers(model = 'unknown') {
       for (const pending of pendingUsers.splice(0)) {
-        groupIncrement(dayMap, pending.date, withModelAttribution(pending.increment, model));
+        const increment = withModelAttribution(pending.increment, model);
+        groupIncrement(dayMap, pending.date, increment);
+        groupIncrement(hourMap, pending.hour, increment);
       }
+    }
+
+    function groupRecord(date, hour, increment) {
+      groupIncrement(dayMap, date, increment);
+      groupIncrement(hourMap, hour, increment);
     }
 
     summary.files += 1;
@@ -165,19 +174,21 @@ function collectClaudeBackfill(options = {}) {
       parsedRecords.push(record);
       const message = record.message || {};
       const date = recordDate(record, filePath, fallbackDate);
+      const hour = hourKey(record.timestamp, fallbackDate ? `${fallbackDate}T00` : '');
       sessionDate ||= date;
+      sessionHour ||= hour;
 
       if (record.type === 'user' && message.role === 'user') {
         const text = visibleText(message);
         if (text) {
-          pendingUsers.push({ date, increment: textIncrement('user', record.type, text, patterns) });
+          pendingUsers.push({ date, hour, increment: textIncrement('user', record.type, text, patterns) });
           countableRecords += 1;
         }
         for (const item of contentItems(message)) {
           if (!item || item.type !== 'tool_result' || item.is_error !== true) {
             continue;
           }
-          groupIncrement(dayMap, date, withModelAttribution(
+          groupRecord(date, hour, withModelAttribution(
             countedIncrement('tool_failures', 1),
             toolModelById.get(item.tool_use_id || item.id) || 'unknown'
           ));
@@ -192,14 +203,14 @@ function collectClaudeBackfill(options = {}) {
         const text = visibleText(message);
         const toolCalls = countContentType(message, 'tool_use');
         if (text) {
-          groupIncrement(dayMap, date, withModelAttribution(
+          groupRecord(date, hour, withModelAttribution(
             textIncrement('assistant', record.type, text, patterns),
             model
           ));
           countableRecords += 1;
         }
         if (toolCalls > 0) {
-          groupIncrement(dayMap, date, withModelAttribution(countedIncrement('tool_calls', toolCalls), model));
+          groupRecord(date, hour, withModelAttribution(countedIncrement('tool_calls', toolCalls), model));
           countableRecords += toolCalls;
         }
         for (const item of contentItems(message)) {
@@ -211,13 +222,13 @@ function collectClaudeBackfill(options = {}) {
       }
 
       if (record.type === 'system' && (record.subtype === 'api_error' || record.level === 'error')) {
-        groupIncrement(dayMap, date, runtimeIncrement());
+        groupRecord(date, hour, runtimeIncrement());
         countableRecords += 1;
       }
     }
 
     if (countableRecords > 0) {
-      groupIncrement(dayMap, sessionDate || localDate(), sessionIncrement());
+      groupRecord(sessionDate || localDate(), sessionHour || `${sessionDate || localDate()}T00`, sessionIncrement());
     }
     flushPendingUsers('unknown');
 
@@ -225,19 +236,24 @@ function collectClaudeBackfill(options = {}) {
     mergeDayMaps(dayMap, extractClaudeMetricsByDate(parsedRecords, {
       fallbackDate: sessionDate || fallbackDate || localDate(),
     }));
+    mergeDayMaps(hourMap, extractClaudeMetricsByHour(parsedRecords, {
+      fallbackHour: sessionHour || `${sessionDate || fallbackDate || localDate()}T00`,
+    }));
     // harn:end historical-per-model-backfill
   }
 
-  return { dayMap, summary };
+  return { dayMap, hourMap, summary };
 }
 
 function backfillClaude(options = {}) {
-  const { dayMap, summary } = collectClaudeBackfill(options);
+  const { dayMap, hourMap, summary } = collectClaudeBackfill(options);
   const writeResult = writeBackfillDays(dayMap, options);
+  const hourly = writeBackfillHours(hourMap, options);
   return {
     ...summary,
     days: dayMap.size,
     ...writeResult,
+    hourly,
   };
 }
 

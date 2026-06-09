@@ -32,4 +32,6 @@
 <!-- harn:assume granularity-bucketing-api ref=progress-phase-b7 -->
 | B7. Day-and-coarser bucketing | `metrics-v3-phase-b7-bucketing` | complete | phase commit | Added validated server-side day/week/2w/month buckets. |
 <!-- harn:end granularity-bucketing-api -->
-| B8. Hourly storage + API | `metrics-v3-phase-b8-hourly` | planned | — | |
+<!-- harn:assume sub-daily-hourly-storage ref=progress-phase-b8 -->
+| B8. Hourly storage + API | `metrics-v3-phase-b8-hourly` | complete | phase commit | Added seven-day hourly persistence, producer parity, pruning, and bounded `1h` API. |
+<!-- harn:end sub-daily-hourly-storage -->

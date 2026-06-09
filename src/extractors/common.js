@@ -7,6 +7,7 @@ const {
   localDate,
   mergeIncrementFields,
 } = require('../log-store');
+const { localHour } = require('../hourly-store');
 
 function number(value) {
   const parsed = Number(value);
@@ -118,6 +119,21 @@ function incrementForDate(dayMap, timestamp, fallbackDate = '') {
   return dayMap.get(date);
 }
 
+// harn:assume sub-daily-hourly-storage ref=hourly-extraction
+function hourKey(value, fallback = '') {
+  const parsed = parseTime(value);
+  return parsed ? localHour(parsed) : fallback;
+}
+
+function incrementForHour(hourMap, timestamp, fallbackHour = '') {
+  const hour = hourKey(timestamp, fallbackHour || localHour());
+  if (!hourMap.has(hour)) {
+    hourMap.set(hour, emptyIncrement());
+  }
+  return hourMap.get(hour);
+}
+// harn:end sub-daily-hourly-storage
+
 function aggregateDayMap(dayMap) {
   const increment = emptyIncrement();
   for (const daily of dayMap.values()) {
@@ -205,10 +221,12 @@ module.exports = {
   dateKey,
   durationMs,
   incrementForDate,
+  incrementForHour,
   incrementToolCall,
   incrementToolFailure,
   incrementToolOutput,
   isoTime,
+  hourKey,
   modelKey,
   modelSlice,
   number,

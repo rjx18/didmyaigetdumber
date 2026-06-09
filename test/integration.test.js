@@ -10,6 +10,8 @@ const test = require('node:test');
 const { runBackfill } = require('../src/backfill');
 const { handleHook } = require('../src/hook');
 const { readDailyLog } = require('../src/log-store');
+const { listHourlyKeys, readHourlyLog } = require('../src/hourly-store');
+const { aggregateRootLogs } = require('../src/metrics');
 const { runReport } = require('../src/report');
 const { apiDays, apiMetricsDays, createServer } = require('../src/server');
 
@@ -281,3 +283,51 @@ test('backfill and live tailing produce the same metric deltas', async () => {
 });
 // harn:end metrics-v3-end-to-end-verification
 // harn:end end-to-end-verification
+
+// harn:assume sub-daily-hourly-storage ref=hourly-backfill-tests
+test('complete-day hourly backfill aggregates match the daily aggregate', async () => {
+  const baseDir = tempBase();
+  const codexSessionsDir = path.join(baseDir, 'codex-sessions');
+  const claudeProjectsDir = path.join(baseDir, 'claude-projects');
+  const { codex, claude } = metricFixtureRecords();
+  writeJsonl(codexFile(codexSessionsDir, '2026-06-09'), codex);
+  writeJsonl(claudeFile(claudeProjectsDir, '2026-06-09'), claude);
+
+  await runBackfill('all', {
+    baseDir,
+    codexSessionsDir,
+    claudeProjectsDir,
+    now: new Date('2026-06-09T12:00:00'),
+  }, { stdout: sink(), stderr: sink() });
+
+  const daily = aggregateRootLogs([readDailyLog('2026-06-09', { baseDir })]);
+  const hourly = aggregateRootLogs(
+    listHourlyKeys({ baseDir }).filter((hour) => hour.startsWith('2026-06-09')).map((hour) => readHourlyLog(hour, { baseDir }))
+  );
+  assert.deepEqual(hourly, daily);
+});
+// harn:end sub-daily-hourly-storage
+
+// harn:assume sub-daily-hourly-storage ref=hourly-hook-tests
+test('live transcript tails persist the same numeric metrics by hour and day', async () => {
+  const baseDir = tempBase();
+  const transcript = path.join(baseDir, 'codex-live.jsonl');
+  const { codex } = metricFixtureRecords();
+  writeJsonl(transcript, codex);
+
+  await handleHook({ baseDir, now: new Date('2026-06-09T12:00:00') }, {
+    stdin: Readable.from([JSON.stringify({
+      event_type: 'Stop',
+      session_id: 'hourly-live-session',
+      transcript_path: transcript,
+      timestamp: '2026-06-09T01:00:31.000Z',
+    })]),
+    stdout: sink(),
+    stderr: sink(),
+  });
+
+  const daily = readDailyLog('2026-06-09', { baseDir });
+  const hour = listHourlyKeys({ baseDir }).find((key) => key.startsWith('2026-06-09'));
+  assert.deepEqual(metricSlice(readHourlyLog(hour, { baseDir })), metricSlice(daily));
+});
+// harn:end sub-daily-hourly-storage

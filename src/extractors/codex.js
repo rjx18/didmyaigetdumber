@@ -7,6 +7,7 @@ const {
   aggregateDayMap,
   durationMs,
   incrementForDate,
+  incrementForHour,
   incrementToolCall,
   incrementToolFailure,
   incrementToolOutput,
@@ -105,8 +106,11 @@ function addToolLatency(increment, name, latency, model) {
 
 // harn:assume date-scoped-transcript-metrics ref=codex-extractor
 // harn:assume turn-model-attribution ref=codex-extractor
-function extractCodexMetricsByDate(records = [], options = {}) {
-  const dayMap = new Map();
+function extractCodexMetricsByBucket(records = [], options = {}) {
+  const bucketMap = new Map();
+  const incrementForBucket = options.bucket === 'hour'
+    ? (timestamp) => incrementForHour(bucketMap, timestamp, options.fallbackHour)
+    : (timestamp) => incrementForDate(bucketMap, timestamp, options.fallbackDate);
   const state = {
     currentModel: 'unknown',
     callById: new Map(),
@@ -135,7 +139,7 @@ function extractCodexMetricsByDate(records = [], options = {}) {
     }
 
     if (record.type === 'event_msg' && payload.type === 'task_complete') {
-      const increment = incrementForDate(dayMap, timestamp, options.fallbackDate);
+      const increment = incrementForBucket(timestamp);
       const elapsed = durationMs(state.taskStartedAt, timestamp);
       addDuration(increment, 'turn_sum', 'turn_count', elapsed, state.taskModel);
       addDuration(increment, 'generation_sum', 'generation_count', elapsed, state.taskModel);
@@ -150,12 +154,12 @@ function extractCodexMetricsByDate(records = [], options = {}) {
     }
 
     if (record.type === 'event_msg' && (payload.type === 'context_compacted' || payload.type === 'compacted')) {
-      incrementForDate(dayMap, timestamp, options.fallbackDate).totals.compactions += 1;
+      incrementForBucket(timestamp).totals.compactions += 1;
       continue;
     }
 
     if (record.type === 'event_msg' && payload.type === 'token_count') {
-      const increment = incrementForDate(dayMap, timestamp, options.fallbackDate);
+      const increment = incrementForBucket(timestamp);
       const usage = usageFromTokenRecord(payload);
       const tokens = usage ? addTokenUsage(increment, usage, state.currentModel) : { total: 0 };
       addRateLimitSamples(increment, payload, timestamp, tokens.total);
@@ -163,7 +167,7 @@ function extractCodexMetricsByDate(records = [], options = {}) {
     }
 
     if (record.type === 'response_item' && isToolCall(payload)) {
-      const increment = incrementForDate(dayMap, timestamp, options.fallbackDate);
+      const increment = incrementForBucket(timestamp);
       const name = safeToolName(toolNameFromCall(payload));
       const model = state.taskStartedAt ? state.taskModel : state.currentModel;
       incrementToolCall(increment, name, model);
@@ -179,7 +183,7 @@ function extractCodexMetricsByDate(records = [], options = {}) {
     }
 
     if (record.type === 'response_item' && payload.type === 'function_call_output') {
-      const increment = incrementForDate(dayMap, timestamp, options.fallbackDate);
+      const increment = incrementForBucket(timestamp);
       const callId = payload.call_id || payload.id;
       const call = state.callById.get(callId) || { name: 'tool', model: state.currentModel };
       incrementToolOutput(increment, call.name, outputValue(payload), call.model);
@@ -191,7 +195,7 @@ function extractCodexMetricsByDate(records = [], options = {}) {
     }
 
     if (record.type === 'event_msg' && payload.type === 'mcp_tool_call_end') {
-      const increment = incrementForDate(dayMap, timestamp, options.fallbackDate);
+      const increment = incrementForBucket(timestamp);
       const name = safeToolName(payload.tool_name || payload.name || 'mcp_tool');
       const model = state.taskStartedAt ? state.taskModel : state.currentModel;
       incrementToolOutput(increment, name, outputValue(payload), model);
@@ -203,7 +207,7 @@ function extractCodexMetricsByDate(records = [], options = {}) {
     }
 
     if (record.type === 'event_msg' && payload.type === 'patch_apply_end') {
-      const increment = incrementForDate(dayMap, timestamp, options.fallbackDate);
+      const increment = incrementForBucket(timestamp);
       const name = 'apply_patch';
       const model = state.taskStartedAt ? state.taskModel : state.currentModel;
       if (isFailure(payload)) {
@@ -213,7 +217,15 @@ function extractCodexMetricsByDate(records = [], options = {}) {
     }
   }
 
-  return dayMap;
+  return bucketMap;
+}
+
+function extractCodexMetricsByDate(records = [], options = {}) {
+  return extractCodexMetricsByBucket(records, options);
+}
+
+function extractCodexMetricsByHour(records = [], options = {}) {
+  return extractCodexMetricsByBucket(records, { ...options, bucket: 'hour' });
 }
 
 function extractCodexMetrics(records = [], options = {}) {
@@ -225,4 +237,5 @@ function extractCodexMetrics(records = [], options = {}) {
 module.exports = {
   extractCodexMetrics,
   extractCodexMetricsByDate,
+  extractCodexMetricsByHour,
 };

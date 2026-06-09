@@ -1,0 +1,13 @@
+id: sub-daily-hourly-storage
+hash: a-38b8e0198305
+title: Sub-daily hourly storage
+state: active
+statement: Transcript-derived telemetry is also stored in aggregate-only
+  local-hour files for the most recent seven local calendar days, with locked
+  atomic writes and pruning, so GET /api/ui may expose granularity=1h without
+  storing raw transcript content.
+depends_on:
+  - per-model-daily-log-schema
+  - local-aggregate-privacy
+  - date-scoped-transcript-metrics
+created_by: metrics-v3-phase-b8-hourly

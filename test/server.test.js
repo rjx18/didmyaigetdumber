@@ -170,6 +170,21 @@ test('rejects unsupported UI API granularity', async () => {
 });
 // harn:end granularity-bucketing-api
 
+test('serves bounded hourly UI data', async () => {
+  const server = createServer({ baseDir: tempBase(), asOf: '2026-06-09' });
+  const port = await listen(server);
+  try {
+    const response = await fetch(`http://127.0.0.1:${port}/api/ui?granularity=1h&days=30`);
+    const payload = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(payload.data.range.granularity, '1h');
+    assert.equal(payload.data.range.days, 7);
+    assert.equal(payload.data.days.length, 168);
+  } finally {
+    await close(server);
+  }
+});
+
 // harn:assume ui-static-asset-serving ref=server-tests-static
 test('serves vendored static UI assets and blocks path escapes', async () => {
   const baseDir = tempBase();

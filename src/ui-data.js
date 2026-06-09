@@ -2,6 +2,7 @@
 
 const { listDailyDates } = require('./report');
 const { emptyModelSlice, localDate, readDailyLog } = require('./log-store');
+const { HOURLY_RETENTION_DAYS, isRetainedHour, listHourlyKeys, readHourlyLog } = require('./hourly-store');
 const {
   aggregateAllModels,
   aggregateModelLogs,
@@ -50,6 +51,12 @@ function calendarDates(asOf, count) {
     dates.push(localDate(date));
   }
   return dates;
+}
+
+function calendarHours(asOf, count) {
+  return calendarDates(asOf, count).flatMap((date) => (
+    Array.from({ length: 24 }, (_, hour) => `${date}T${String(hour).padStart(2, '0')}`)
+  ));
 }
 
 function logForModel(date, slice) {
@@ -201,7 +208,7 @@ function modelCoverageFor(model, modelAggregate, rootAggregate) {
 }
 
 // harn:assume granularity-bucketing-api ref=bucket-builder
-const VALID_GRANULARITIES = new Set(['day', 'week', '2w', 'month']);
+const VALID_GRANULARITIES = new Set(['1h', 'day', 'week', '2w', 'month']);
 const TWO_WEEK_ANCHOR = '1970-01-05';
 
 function parseGranularity(value) {
@@ -224,7 +231,7 @@ function dateFromUtcDay(dayNumber) {
 }
 
 function bucketKey(date, granularity) {
-  if (granularity === 'day') {
+  if (granularity === '1h' || granularity === 'day') {
     return date;
   }
   if (granularity === 'month') {
@@ -277,16 +284,24 @@ function compatibilityLimits(windows, corrected) {
 
 // harn:assume rolling-status-metrics-api ref=ui-data-builder
 function buildUiData(options = {}) {
-  const visibleDays = parseDays(options.days);
+  const requestedDays = parseDays(options.days);
   const granularity = parseGranularity(options.granularity);
   const availableDates = listDailyDates(options);
-  const asOf = options.asOf || availableDates[availableDates.length - 1] || localDate();
-  const dates = calendarDates(asOf, visibleDays);
-  const logs = dates.map((date) => readDailyLog(date, options));
+  const availableHours = granularity === '1h'
+    ? listHourlyKeys(options).filter((hour) => isRetainedHour(hour, options))
+    : [];
+  const asOf = options.asOf
+    || (granularity === '1h' && availableHours.length > 0 ? availableHours[availableHours.length - 1].slice(0, 10) : '')
+    || availableDates[availableDates.length - 1]
+    || localDate();
+  // harn:assume sub-daily-hourly-storage ref=hourly-ui-api
+  const visibleDays = granularity === '1h' ? Math.min(requestedDays, HOURLY_RETENTION_DAYS) : requestedDays;
+  const dates = granularity === '1h' ? calendarHours(asOf, visibleDays) : calendarDates(asOf, visibleDays);
+  const logs = dates.map((date) => granularity === '1h' ? readHourlyLog(date, options) : readDailyLog(date, options));
   const buckets = bucketLogs(dates, logs, granularity);
   const bucketedLogs = buckets.map((bucket) => ({ ...aggregateRootLogs(bucket.logs), date: bucket.start }));
-  const actualDates = new Set(availableDates);
-  const activityDays = dates.filter((date) => actualDates.has(date)).length;
+  const actualDates = new Set(granularity === '1h' ? availableHours : availableDates);
+  const activityBuckets = dates.filter((date) => actualDates.has(date)).length;
   const series = buildSeries(bucketedLogs);
 
   const rollingDates = calendarDates(asOf, 28);
@@ -333,8 +348,15 @@ function buildUiData(options = {}) {
 
   return {
     apiVersion: 2,
-    range: { days: visibleDays, granularity, timezone: 'local', start: dates[0], end: dates[dates.length - 1] },
-    N: activityDays,
+    range: {
+      days: visibleDays,
+      ...(granularity === '1h' ? { requestedDays } : {}),
+      granularity,
+      timezone: 'local',
+      start: dates[0],
+      end: dates[dates.length - 1],
+    },
+    N: activityBuckets,
     days: buckets.map((bucket) => bucket.start),
     buckets: buckets.map(({ key, start, end }) => ({ key, start, end })),
     models,
@@ -353,6 +375,7 @@ function buildUiData(options = {}) {
     limits,
     ...series,
   };
+  // harn:end sub-daily-hourly-storage
 }
 // harn:end rolling-status-metrics-api
 
@@ -360,6 +383,7 @@ module.exports = {
   STATUS_THRESHOLDS,
   buildUiData,
   calendarDates,
+  calendarHours,
   rollingMetrics,
   bucketKey,
   bucketLogs,

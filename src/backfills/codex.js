@@ -6,9 +6,9 @@ const path = require('path');
 const { incrementFromEvent } = require('../events');
 const { emptyIncrement, localDate } = require('../log-store');
 const { matchPatterns, loadPatterns } = require('../patterns');
-const { groupIncrement, mergeDayMaps, withModelAttribution, writeBackfillDays } = require('../backfill');
-const { extractCodexMetricsByDate } = require('../extractors/codex');
-const { modelKey } = require('../extractors/common');
+const { groupIncrement, mergeDayMaps, withModelAttribution, writeBackfillDays, writeBackfillHours } = require('../backfill');
+const { extractCodexMetricsByDate, extractCodexMetricsByHour } = require('../extractors/codex');
+const { hourKey, modelKey } = require('../extractors/common');
 
 const SELF_PROJECT_PATTERN = /didmyaigetdumber/i;
 
@@ -137,6 +137,7 @@ function collectCodexBackfill(options = {}) {
   };
   const excludeProject = options.excludeProject === undefined ? SELF_PROJECT_PATTERN : options.excludeProject;
   const dayMap = new Map();
+  const hourMap = new Map();
   const summary = {
     files: 0,
     records: 0,
@@ -154,6 +155,7 @@ function collectCodexBackfill(options = {}) {
 
     const fallbackDate = dateFromFilePath(filePath);
     let sessionDate = fallbackDate;
+    let sessionHour = '';
     let sessionCounted = false;
     let countableRecords = 0;
     const parsedRecords = [];
@@ -162,8 +164,15 @@ function collectCodexBackfill(options = {}) {
 
     function flushPendingUsers(model = 'unknown') {
       for (const pending of pendingUsers.splice(0)) {
-        groupIncrement(dayMap, pending.date, withModelAttribution(pending.increment, model));
+        const increment = withModelAttribution(pending.increment, model);
+        groupIncrement(dayMap, pending.date, increment);
+        groupIncrement(hourMap, pending.hour, increment);
       }
+    }
+
+    function groupRecord(date, hour, increment) {
+      groupIncrement(dayMap, date, increment);
+      groupIncrement(hourMap, hour, increment);
     }
 
     summary.files += 1;
@@ -184,7 +193,9 @@ function collectCodexBackfill(options = {}) {
       parsedRecords.push(record);
       const payload = record.payload || {};
       const date = recordDate(record, filePath, fallbackDate);
+      const hour = hourKey(record.timestamp || payload.timestamp, fallbackDate ? `${fallbackDate}T00` : '');
       sessionDate ||= date;
+      sessionHour ||= hour;
 
       if (record.type === 'turn_context' || payload.type === 'turn_context') {
         currentModel = modelKey(payload.model || record.model);
@@ -193,7 +204,7 @@ function collectCodexBackfill(options = {}) {
       }
 
       if (record.type === 'session_meta' && !sessionCounted) {
-        groupIncrement(dayMap, date, sessionIncrement());
+        groupRecord(date, hour, sessionIncrement());
         sessionCounted = true;
         continue;
       }
@@ -202,9 +213,9 @@ function collectCodexBackfill(options = {}) {
         const text = firstString(payload.message, payload.text);
         const increment = textIncrement('user', payload.type, text, patterns);
         if (currentModel === 'unknown') {
-          pendingUsers.push({ date, increment });
+          pendingUsers.push({ date, hour, increment });
         } else {
-          groupIncrement(dayMap, date, withModelAttribution(increment, currentModel));
+          groupRecord(date, hour, withModelAttribution(increment, currentModel));
         }
         countableRecords += 1;
         continue;
@@ -212,7 +223,7 @@ function collectCodexBackfill(options = {}) {
 
       if (record.type === 'event_msg' && payload.type === 'agent_message') {
         const text = firstString(payload.message, payload.text);
-        groupIncrement(dayMap, date, withModelAttribution(
+        groupRecord(date, hour, withModelAttribution(
           textIncrement('assistant', payload.type, text, patterns),
           currentModel
         ));
@@ -221,7 +232,7 @@ function collectCodexBackfill(options = {}) {
       }
 
       if (record.type === 'response_item' && shouldCountToolCall(payload)) {
-        groupIncrement(dayMap, date, withModelAttribution(
+        groupRecord(date, hour, withModelAttribution(
           flagIncrement(payload.type, { tool_call: true }),
           currentModel
         ));
@@ -230,13 +241,13 @@ function collectCodexBackfill(options = {}) {
       }
 
       if (record.type === 'event_msg' && (payload.type === 'turn_aborted' || payload.type === 'error')) {
-        groupIncrement(dayMap, date, flagIncrement(payload.type, { runtime_interrupt: true }));
+        groupRecord(date, hour, flagIncrement(payload.type, { runtime_interrupt: true }));
         countableRecords += 1;
       }
     }
 
     if (!sessionCounted && countableRecords > 0) {
-      groupIncrement(dayMap, sessionDate || localDate(), sessionIncrement());
+      groupRecord(sessionDate || localDate(), sessionHour || `${sessionDate || localDate()}T00`, sessionIncrement());
     }
     flushPendingUsers('unknown');
 
@@ -244,19 +255,24 @@ function collectCodexBackfill(options = {}) {
     mergeDayMaps(dayMap, extractCodexMetricsByDate(parsedRecords, {
       fallbackDate: sessionDate || fallbackDate || localDate(),
     }));
+    mergeDayMaps(hourMap, extractCodexMetricsByHour(parsedRecords, {
+      fallbackHour: sessionHour || `${sessionDate || fallbackDate || localDate()}T00`,
+    }));
     // harn:end historical-per-model-backfill
   }
 
-  return { dayMap, summary };
+  return { dayMap, hourMap, summary };
 }
 
 function backfillCodex(options = {}) {
-  const { dayMap, summary } = collectCodexBackfill(options);
+  const { dayMap, hourMap, summary } = collectCodexBackfill(options);
   const writeResult = writeBackfillDays(dayMap, options);
+  const hourly = writeBackfillHours(hourMap, options);
   return {
     ...summary,
     days: dayMap.size,
     ...writeResult,
+    hourly,
   };
 }
 

@@ -1,0 +1,169 @@
+id: metrics-v3-phase-b8-hourly
+title: Add bounded hourly aggregate storage and API
+assumptions:
+  retire: []
+  create:
+    - id: sub-daily-hourly-storage
+      title: Sub-daily hourly storage
+      statement: Transcript-derived telemetry is also stored in aggregate-only
+        local-hour files for the most recent seven local calendar days, with
+        locked atomic writes and pruning, so GET /api/ui may expose
+        granularity=1h without storing raw transcript content.
+      reason: Hourly charts require bounded sub-daily persistence while preserving the
+        existing aggregate privacy contract.
+      depends_on:
+        - per-model-daily-log-schema
+        - local-aggregate-privacy
+        - date-scoped-transcript-metrics
+  reviewed:
+    - id: date-scoped-transcript-metrics
+      outcome: unchanged
+      reason: Existing daily extraction remains unchanged while the same record
+        timestamps additionally partition transcript metrics by local hour.
+    - id: historical-per-model-backfill
+      outcome: unchanged
+      reason: Historical backfill continues writing date-scoped model-attributed daily
+        logs and additionally writes matching hourly aggregates.
+    - id: live-attribution-reconciliation
+      outcome: unchanged
+      reason: Live transcript tails continue writing daily increments once and
+        additionally persist the same tail metrics by hour.
+    - id: granularity-bucketing-api
+      outcome: unchanged
+      reason: Existing day-and-coarser aggregation behavior remains unchanged while 1h
+        reads bounded hourly aggregates.
+    - id: local-aggregate-privacy
+      outcome: unchanged
+      reason: Hourly files and API branches contain only the same sanitized aggregate
+        metric slices as daily logs.
+    - id: turn-model-attribution
+      outcome: unchanged
+      reason: Hourly extraction uses the same turn ownership state as daily extraction.
+    - id: codex-historical-backfill
+      outcome: unchanged
+      reason: Codex parsing semantics remain unchanged while records are additionally
+        grouped by hour.
+    - id: claude-historical-backfill
+      outcome: unchanged
+      reason: Claude parsing semantics remain unchanged while records are additionally
+        grouped by hour.
+anchors:
+  sub-daily-hourly-storage:
+    hourly-store:
+      action: change
+      reason: Add hourly schema reuse, atomic locking, reads, and seven-day pruning.
+    hourly-extraction:
+      action: change
+      reason: Add local-hour timestamp bucketing helpers and extractor entry points.
+    hourly-backfill:
+      action: change
+      reason: Collect and write hourly aggregates during provider backfills.
+    hourly-live-tail:
+      action: change
+      reason: Write hourly transcript-tail increments during live hook processing.
+    hourly-ui-api:
+      action: change
+      reason: Expose a bounded 1h UI range using hourly aggregate files.
+    hourly-store-tests:
+      action: change
+      reason: Verify timestamp boundaries, retention, locking-compatible writes, and
+        privacy.
+    hourly-extractor-tests:
+      action: change
+      reason: Verify record timestamps partition extractor metrics by local hour.
+    hourly-backfill-tests:
+      action: change
+      reason: Verify complete-day hourly and daily aggregates match.
+    hourly-hook-tests:
+      action: change
+      reason: Verify live tails persist hourly increments without changing daily
+        ownership.
+    hourly-api-tests:
+      action: change
+      reason: Verify 1h validation, bounded range, and aggregate-only response.
+    progress-phase-b8:
+      action: change
+      reason: Track B8 implementation and completion.
+  date-scoped-transcript-metrics:
+    extractor-common:
+      action: change
+      reason: Generalize timestamp partitioning for date and hour maps.
+    codex-extractor:
+      action: change
+      reason: Add Codex hourly extraction entry point.
+    claude-extractor:
+      action: change
+      reason: Add Claude hourly extraction entry point.
+  historical-per-model-backfill:
+    backfill-attribution:
+      action: change
+      reason: Reuse map grouping and writing for hourly model-attributed aggregates.
+    codex-backfill-metrics:
+      action: change
+      reason: Collect Codex transcript metrics by hour.
+    claude-backfill-metrics:
+      action: change
+      reason: Collect Claude transcript metrics by hour.
+  turn-model-attribution:
+    codex-extractor:
+      action: change
+      reason: Reuse existing Codex attribution state for hourly partitions.
+    claude-extractor:
+      action: change
+      reason: Reuse existing Claude attribution state for hourly partitions.
+  codex-historical-backfill:
+    codex-backfill-parser:
+      action: change
+      reason: Group sanitized Codex record increments into an hourly map.
+  claude-historical-backfill:
+    claude-backfill-parser:
+      action: change
+      reason: Group sanitized Claude record increments into an hourly map.
+    claude-backfill-dispatch:
+      action: change
+      reason: Merge and write provider hourly maps in combined backfill.
+  live-attribution-reconciliation:
+    hook-tail:
+      action: change
+      reason: Return date and hour maps from each transcript tail.
+    hook-runner:
+      action: change
+      reason: Persist hourly tail increments alongside daily increments.
+  granularity-bucketing-api:
+    bucket-builder:
+      action: change
+      reason: Validate 1h and construct hourly series from hourly storage.
+    server-granularity:
+      action: change
+      reason: Accept 1h through the existing validated query parameter.
+  rolling-status-metrics-api:
+    ui-data-builder:
+      action: change
+      reason: Use hourly logs for visible 1h series while preserving daily rolling
+        windows.
+  local-dashboard-server:
+    server-http:
+      action: change
+      reason: Serve the expanded validated granularity.
+files:
+  - src/hourly-store.js
+  - src/extractors/common.js
+  - src/extractors/codex.js
+  - src/extractors/claude.js
+  - src/backfill.js
+  - src/backfills/codex.js
+  - src/backfills/claude.js
+  - src/hook.js
+  - src/ui-data.js
+  - src/server.js
+  - test/hourly-store.test.js
+  - test/extractors.test.js
+  - test/codex-backfill.test.js
+  - test/claude-backfill.test.js
+  - test/integration.test.js
+  - test/ui-data.test.js
+  - test/server.test.js
+  - test/privacy.test.js
+  - metrics-v3-progress.md
+applied:
+  applied_at: 2026-06-09T01:50:26.488Z

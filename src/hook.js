@@ -6,8 +6,9 @@ const { incrementFromEvent } = require('./events');
 const { ensureDailyLog, updateDailyLog, localDate } = require('./log-store');
 const { tailJsonlTranscript } = require('./offset-store');
 const { matchPatterns } = require('./patterns');
-const { extractClaudeMetricsByDate } = require('./extractors/claude');
-const { extractCodexMetricsByDate } = require('./extractors/codex');
+const { extractClaudeMetricsByDate, extractClaudeMetricsByHour } = require('./extractors/claude');
+const { extractCodexMetricsByDate, extractCodexMetricsByHour } = require('./extractors/codex');
+const { localHour, updateHourlyLog } = require('./hourly-store');
 
 async function readStdin(stdin) {
   let input = '';
@@ -36,6 +37,13 @@ function dateForPayload(payload, options = {}) {
     }
   }
   return localDate();
+}
+
+function hourForPayload(payload, options = {}) {
+  const timestamp = payload.observed_at || payload.timestamp || (payload.payload && payload.payload.timestamp);
+  const observedHour = timestamp ? localHour(timestamp) : '';
+  const fallback = options.now instanceof Date ? options.now : new Date(options.now || Date.now());
+  return observedHour || `${options.date || localDate(fallback)}T${String(fallback.getHours()).padStart(2, '0')}`;
 }
 
 function detectAgent(payload, options = {}) {
@@ -81,8 +89,8 @@ function shouldTailTranscript(agent, eventType) {
 }
 
 function hasMetricData(increment) {
-  return increment.totals.turns > 0
-    || increment.totals.compactions > 0
+  return Object.values(increment.totals).some((value) => value > 0)
+    || Object.values(increment.matches).some((match) => match.events > 0 || match.line_hits > 0)
     || Object.values(increment.tokens).some((value) => value > 0)
     || Object.keys(increment.tool_output_chars).length > 0
     || Object.keys(increment.tool_calls_by_name).length > 0
@@ -95,6 +103,12 @@ function hasMetricData(increment) {
 
 // harn:assume live-attribution-reconciliation ref=hook-tail
 function liveTailIncrementsByDate(agent, payload, normalized, options = {}) {
+  const result = liveTailIncrements(agent, payload, normalized, options);
+  return result && result.dayMap;
+}
+
+// harn:assume sub-daily-hourly-storage ref=hourly-live-tail
+function liveTailIncrements(agent, payload, normalized, options = {}) {
   if (!shouldTailTranscript(agent, normalized.event_type)) {
     return null;
   }
@@ -112,16 +126,25 @@ function liveTailIncrementsByDate(agent, payload, normalized, options = {}) {
     const dayMap = agent === 'claude'
       ? extractClaudeMetricsByDate(tail.records, { fallbackDate: dateForPayload(payload, options) })
       : extractCodexMetricsByDate(tail.records, { fallbackDate: dateForPayload(payload, options) });
+    const hourMap = agent === 'claude'
+      ? extractClaudeMetricsByHour(tail.records, { fallbackHour: hourForPayload(payload, options) })
+      : extractCodexMetricsByHour(tail.records, { fallbackHour: hourForPayload(payload, options) });
     for (const [date, increment] of [...dayMap]) {
       if (!hasMetricData(increment)) {
         dayMap.delete(date);
       }
     }
-    return dayMap.size > 0 ? dayMap : null;
+    for (const [hour, increment] of [...hourMap]) {
+      if (!hasMetricData(increment)) {
+        hourMap.delete(hour);
+      }
+    }
+    return dayMap.size > 0 || hourMap.size > 0 ? { dayMap, hourMap } : null;
   } catch (_error) {
     return null;
   }
 }
+// harn:end sub-daily-hourly-storage
 // harn:end live-attribution-reconciliation
 
 // harn:assume live-attribution-reconciliation ref=hook-runner
@@ -144,11 +167,17 @@ async function handleHook(options = {}, io) {
 
   const increment = incrementFromEvent(normalized);
   updateDailyLog(date, increment, options);
+  if (hasMetricData(increment)) {
+    updateHourlyLog(hourForPayload(payload, options), increment, options);
+  }
 
-  const metricsByDate = liveTailIncrementsByDate(agent, payload, normalized, options);
-  if (metricsByDate) {
-    for (const [metricDate, metricsIncrement] of metricsByDate) {
+  const tailIncrements = liveTailIncrements(agent, payload, normalized, options);
+  if (tailIncrements) {
+    for (const [metricDate, metricsIncrement] of tailIncrements.dayMap) {
       updateDailyLog(metricDate, metricsIncrement, options);
+    }
+    for (const [metricHour, metricsIncrement] of tailIncrements.hourMap) {
+      updateHourlyLog(metricHour, metricsIncrement, options);
     }
   }
   return 0;
@@ -157,6 +186,7 @@ async function handleHook(options = {}, io) {
 
 module.exports = {
   handleHook,
+  liveTailIncrements,
   liveTailIncrementsByDate,
   shouldTailTranscript,
 };
