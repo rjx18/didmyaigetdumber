@@ -230,6 +230,15 @@ body {
 .lim-row .num { color: var(--strong); }
 @media (max-width: 720px) { .lim-grid { grid-template-columns: 1fr; } }
 
+/* ---------- per-model multi-line ---------- */
+.legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 14px; }
+.legend .leg { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: var(--muted); }
+.leg-dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
+.tip.multi { min-width: 150px; }
+.tip.multi .tip-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.tip.multi .tip-name { flex: 1; opacity: 0.85; white-space: nowrap; }
+.tip.multi .tip-val { font-variant-numeric: tabular-nums; }
+
 /* ---------- the chart primitive ---------- */
 .mini { position: relative; width: 100%; }
 .mini svg { display: block; width: 100%; height: 100%; overflow: visible; }

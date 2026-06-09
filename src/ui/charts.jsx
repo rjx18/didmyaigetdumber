@@ -128,6 +128,73 @@ function MiniLine({ values, dates, fmt = "num2", color = "accent", axis = true, 
 }
 // harn:end ui-chart-hover-marker-alignment
 
+// harn:assume ui-per-model-multiline ref=chart-multi-line
+// MultiLine: one smooth line per series on a SHARED y-axis (so models compare on the
+// same scale), with a color legend and a hover that lists every line's value. Stroke
+// colors are set inline (per-line), overriding the .line class color.
+function MultiLine({ lines, dates, fmt = "num2", height = 220, padY = 14 }) {
+  const [hi, setHi] = useState(null);
+  const ref = useRef(null);
+  const fmtFn = typeof fmt === "function" ? fmt : FMT[fmt];
+  const active = (lines || []).filter((l) => l.values && l.values.length);
+  const all = active.flatMap((l) => l.values);
+  const min = all.length ? Math.min(...all) : 0;
+  const max = all.length ? Math.max(...all) : 1;
+  const span = max - min || 1;
+  const n = active[0] ? active[0].values.length : 0;
+  const innerH = height - padY * 2;
+  const yFor = (v) => padY + (1 - (v - min) / span) * innerH;
+  const pathOf = (values) => smoothPath(values.map((v, i) => [(i / (n - 1)) * 1000, yFor(v)]));
+
+  const onMove = useCallback((e) => {
+    if (!ref.current || n === 0) return;
+    const r = ref.current.getBoundingClientRect();
+    const frac = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+    setHi(Math.round(frac * (n - 1)));
+  }, [n]);
+
+  const xPct = hi != null ? (hi / (n - 1)) * 100 : 0;
+  const tipLeft = Math.min(88, Math.max(8, xPct));
+
+  return (
+    <div>
+      <div className="legend">
+        {active.map((l) => (
+          <span className="leg" key={l.name}>
+            <span className="leg-dot" style={{ background: l.color }} />{l.name}
+          </span>
+        ))}
+      </div>
+      <div className="mini" style={{ height }} ref={ref} onMouseMove={onMove} onMouseLeave={() => setHi(null)}>
+        <svg viewBox={`0 0 1000 ${height}`} preserveAspectRatio="none" aria-hidden="true">
+          <line className="axis" x1="0" y1={height - 0.5} x2="1000" y2={height - 0.5} />
+          {active.map((l) => <path key={l.name} className="line" style={{ stroke: l.color }} d={pathOf(l.values)} />)}
+        </svg>
+        {hi != null && (
+          <>
+            <div className="guide" style={{ left: xPct + "%" }} />
+            {active.map((l) => (
+              <div className="knob" key={l.name}
+                style={{ left: xPct + "%", top: (yFor(l.values[hi]) / height * 100) + "%", borderColor: l.color }} />
+            ))}
+            <div className="tip multi" style={{ left: tipLeft + "%", top: 0 }}>
+              <div className="tip-date">{dates ? fmtDate(dates[hi]) : "#" + hi}</div>
+              {active.map((l) => (
+                <div className="tip-row" key={l.name}>
+                  <span className="leg-dot" style={{ background: l.color }} />
+                  <span className="tip-name">{l.name}</span>
+                  <span className="tip-val num">{fmtFn(l.values[hi])}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+// harn:end ui-per-model-multiline
+
 // Sparkline: tiny, no axis, hover knob only (used in KPI strip)
 function Spark({ values, color = "ghost", height = 30 }) {
   const { d } = pathFor(values, height, 4);
@@ -175,4 +242,4 @@ function HBars({ rows, max, fmt = "int", colorFor }) {
   );
 }
 
-Object.assign(window, { MiniLine, Spark, Delta, HBars, FMT, fmtDate });
+Object.assign(window, { MiniLine, MultiLine, Spark, Delta, HBars, FMT, fmtDate });

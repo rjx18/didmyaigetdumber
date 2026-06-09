@@ -1,0 +1,37 @@
+id: frontend-r5-per-model-multiline
+title: Draw one line per model in the All-models featured chart
+assumptions:
+  retire: []
+  create:
+    - id: ui-per-model-multiline
+      title: All-models featured chart overlays one line per model
+      statement: When "All models" is selected and there are at least two models with
+        data, each section's featured chart renders a `MultiLine` with one
+        smooth, distinctly colored line per model (from `byModel[id].series` via
+        the section's metric selector) on a shared y-axis, with a color legend
+        and a hover that lists every model's value at the point; selecting a
+        specific model (or having a single model) falls back to the single
+        `MiniLine`. The `<synthetic>` and zero-token models are excluded.
+      reason: A single aggregate line hides per-model differences; users need to
+        compare models side by side on the same axis.
+      depends_on:
+        - ui-live-data-binding
+        - ui-model-selector
+        - rolling-status-metrics-api
+  reviewed: []
+anchors:
+  ui-per-model-multiline:
+    chart-multi-line:
+      action: change
+      reason: Add the MultiLine chart primitive (shared-axis overlay, legend, hover).
+    featured-multimodel:
+      action: change
+      reason: FeaturedChart chooses MultiLine (per-model overlay) for All-models vs
+        the single MiniLine otherwise.
+files:
+  - src/ui/charts.jsx
+  - src/ui/sections.jsx
+  - src/ui/styles.css
+  - frontend-dashboard-progress.md
+applied:
+  applied_at: 2026-06-09T05:22:38.860Z

@@ -1,0 +1,16 @@
+id: ui-per-model-multiline
+hash: a-0aef115e5ff8
+title: All-models featured chart overlays one line per model
+state: active
+statement: When "All models" is selected and there are at least two models with
+  data, each section's featured chart renders a `MultiLine` with one smooth,
+  distinctly colored line per model (from `byModel[id].series` via the section's
+  metric selector) on a shared y-axis, with a color legend and a hover that
+  lists every model's value at the point; selecting a specific model (or having
+  a single model) falls back to the single `MiniLine`. The `<synthetic>` and
+  zero-token models are excluded.
+depends_on:
+  - ui-live-data-binding
+  - ui-model-selector
+  - rolling-status-metrics-api
+created_by: frontend-r5-per-model-multiline

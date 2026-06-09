@@ -60,4 +60,4 @@ charts, leftover "coming to this section" placeholders, and single-line "All mod
 | R2. Remove "coming to this section" | `frontend-r2-remove-placeholders` | complete | phase commit | Delete roadmap placeholders + `.planned` styles. |
 | R3. Rate-limit card redesign | `frontend-r3-rate-limit-redesign` | complete | phase commit | Lead with reset + used%; exhaustion is a conditional warning. |
 | R4. SPA data loading | `frontend-r4-spa-loading` | complete | phase commit | Async re-fetch on granularity; no page reload. |
-| R5. Per-model multi-line for "All models" | `frontend-r5-per-model-multiline` | planned | — | One colored line per model + legend. |
+| R5. Per-model multi-line for "All models" | `frontend-r5-per-model-multiline` | complete | phase commit | One colored line per model + legend. |

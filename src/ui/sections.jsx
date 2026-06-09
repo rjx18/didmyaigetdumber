@@ -243,21 +243,38 @@ function ToolBars({ scope }) {
   );
 }
 
+// harn:assume ui-per-model-multiline ref=featured-multimodel
+// Distinct per-model line colors for the All-models overlay.
+const MODEL_COLORS = ["#5b6b97", "#6b8a72", "#a0795c", "#9c5c7a", "#5c8a9c", "#8a7a5c", "#7a5c9c"];
+const modelLabel = (name) => { const i = name.lastIndexOf("/"); return i >= 0 ? name.slice(i + 1) : name; };
+
 function FeaturedChart({ chart, scope }) {
-  const values = chart.pick(scope.series);
+  const models = (scope.models || []).filter((m) => m.id !== "<synthetic>" && m.tokens > 0 && scope.byModel[m.id]);
+  const multi = scope.model === "all" && models.length >= 2;
   return (
     <div>
       <div className="chart-head">
         <div>
           <div className="chart-title">{chart.title}</div>
-          <div className="chart-sub">{chart.sub}</div>
+          <div className="chart-sub">{chart.sub}{multi ? " · by model" : ""}</div>
         </div>
         <div className="chart-now num">{chart.now(scope.series)}</div>
       </div>
-      <MiniLine values={values} dates={scope.days} fmt={chart.fmt} color={chart.color} height={200} goodDir={chart.goodDir} />
+      {multi ? (
+        <MultiLine
+          lines={models.map((m, i) => ({
+            name: modelLabel(m.name),
+            color: MODEL_COLORS[i % MODEL_COLORS.length],
+            values: chart.pick(scope.byModel[m.id].series),
+          }))}
+          dates={scope.days} fmt={chart.fmt} height={220} />
+      ) : (
+        <MiniLine values={chart.pick(scope.series)} dates={scope.days} fmt={chart.fmt} color={chart.color} height={200} goodDir={chart.goodDir} />
+      )}
     </div>
   );
 }
+// harn:end ui-per-model-multiline
 
 // harn:assume ui-rate-limit-window-cards ref=ui-rate-limit-view
 // Account-wide rate-limit windows. Lead with when the window resets and how full it
