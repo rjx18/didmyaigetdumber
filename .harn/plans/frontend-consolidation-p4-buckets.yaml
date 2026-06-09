@@ -1,0 +1,23 @@
+id: frontend-consolidation-p4-buckets
+title: Omit a partial leading bucket from the dashboard series
+assumptions:
+  retire: []
+  create: []
+  reviewed:
+    - id: ui-live-data-binding
+      outcome: unchanged
+      reason: The loader still renders only from /api/ui; adaptLive additionally drops
+        a partial leading bucket (one whose day-span is shorter than the next
+        full bucket) by slicing the first element from days, buckets, and every
+        aligned numeric series (top-level, account, and per-model), so the axis
+        starts on a complete period.
+anchors:
+  ui-live-data-binding:
+    ui-data-loader:
+      action: change
+      reason: Add leading-partial-bucket detection and aligned slicing in adaptLive.
+files:
+  - src/ui/data.js
+  - frontend-consolidation-progress.md
+applied:
+  applied_at: 2026-06-09T10:24:12.740Z

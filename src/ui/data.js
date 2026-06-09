@@ -65,11 +65,48 @@
     };
   }
 
+  // Slice the first element off every bucket-aligned numeric series in `obj`.
+  function sliceSeriesArrays(obj, n) {
+    if (!obj || typeof obj !== "object") return;
+    for (const k of Object.keys(obj)) {
+      const v = obj[k];
+      if (Array.isArray(v)) {
+        if (v.length === n && v.every((x) => typeof x === "number")) obj[k] = v.slice(1);
+      } else if (v && typeof v === "object") {
+        sliceSeriesArrays(v, n); // e.g. tokens.comp
+      }
+    }
+  }
+
+  // Drop a partial leading bucket (its day-span is shorter than the next full bucket)
+  // so the chart axis starts on a complete period. Slices days, buckets, and every
+  // aligned series (top-level, account, all, and per-model).
+  function dayNum(s) { return Math.floor(Date.parse(s + "T00:00:00") / 86400000); }
+  function dropLeadingBucket(data) {
+    const n = data.days.length;
+    data.days = data.days.slice(1);
+    if (Array.isArray(data.buckets)) data.buckets = data.buckets.slice(1);
+    for (const key of ["friction", "activity", "tokens", "cache", "reasoning", "tools", "timing"]) {
+      sliceSeriesArrays(data[key], n);
+    }
+    if (data.account && data.account.series) sliceSeriesArrays(data.account.series, n);
+    if (data.all && data.all.series) sliceSeriesArrays(data.all.series, n);
+    for (const id of Object.keys(data.byModel || {})) {
+      if (data.byModel[id] && data.byModel[id].series) sliceSeriesArrays(data.byModel[id].series, n);
+    }
+  }
+
   // Adapt the /api/ui payload: dates -> Date objects, attach client-side helpers.
   function adaptLive(api) {
     const data = Object.assign(emptyData(), api);
     data.days = (api.days || []).map((s) => new Date(s + "T00:00:00"));
     data.helpers = helpers;
+    const buckets = api.buckets || [];
+    const gran = (api.range && api.range.granularity) || "day";
+    if (gran !== "1h" && buckets.length >= 2
+      && (dayNum(buckets[0].end) - dayNum(buckets[0].start)) < (dayNum(buckets[1].end) - dayNum(buckets[1].start))) {
+      dropLeadingBucket(data);
+    }
     return data;
   }
 
