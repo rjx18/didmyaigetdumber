@@ -1,0 +1,30 @@
+id: frontend-fe-a-payload-plumbing
+title: Plumb the full /api/ui payload through the dashboard data layer
+assumptions:
+  retire: []
+  create: []
+  reviewed:
+    - id: ui-live-data-binding
+      outcome: unchanged
+      reason: The loader still fetches /api/ui at load and renders only from that
+        response with the same empty/error/demo states; this change only widens
+        the adapted DATA object to carry the existing
+        all/byModel/models/account/rolling/ status/reworked-limits/buckets
+        fields and forwards the granularity query, so the binding contract is
+        unchanged.
+    - id: ui-offline-vendored-assets
+      outcome: unchanged
+      reason: The added granularity query parameter targets the same-origin /api/ui;
+        no external or CDN request is introduced.
+anchors:
+  ui-live-data-binding:
+    ui-data-loader:
+      action: change
+      reason: Widen emptyData/adaptLive to carry the new payload blocks and forward
+        the granularity query so downstream sections can read
+        model/rolling/status.
+files:
+  - src/ui/data.js
+  - frontend-dashboard-progress.md
+applied:
+  applied_at: 2026-06-09T03:10:02.659Z

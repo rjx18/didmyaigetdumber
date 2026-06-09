@@ -19,6 +19,31 @@
   const last = (arr) => arr[arr.length - 1];
   const helpers = { delta, last };
 
+  // Empty metrics-v3 blocks so the empty/error fallback (and downstream sections that
+  // read all/byModel/rolling/status) never touch undefined. Shapes mirror /api/ui.
+  function emptyRolling() {
+    const z = () => ({ current: 0, previous: 0, change: 0, changeRatio: null });
+    return {
+      friction: z(), cacheHit: z(), reasoningShare: z(), thinkingShare: z(),
+      toolError: z(), toolsPerMessage: z(), avgTurnMs: z(), avgTtftMs: z(),
+      avgToolLatencyMs: z(), throughput: z(), tokensPerDay: z(), sessionsPerDay: z(),
+      messagesPerDay: z(),
+    };
+  }
+  function emptyStatus() {
+    return {
+      verdict: "insufficient-data",
+      signals: {
+        friction: { value: 0, threshold: 0.085, degraded: false },
+        cache: { value: 0, threshold: 0.6, degraded: false },
+        toolError: { value: 0, threshold: 0.09, degraded: false },
+      },
+    };
+  }
+  function emptyView() {
+    return { series: {}, aggregates: { tools: [] }, rolling: emptyRolling(), status: emptyStatus(), coverage: {} };
+  }
+
   function emptyData() {
     return {
       N: 0, days: [],
@@ -30,7 +55,12 @@
       tools: { perMsg: [], mix: [] },
       models: [],
       timing: { turnDuration: [], ttft: [], throughput: [], toolLatency: [] },
-      limits: { windowUsedPct: 0, weeklyUsedPct: 0, burnRate: 0, windowHistory: [] },
+      limits: { windowUsedPct: 0, weeklyUsedPct: 0, burnRate: 0, windowHistory: [], fiveHour: null, weekly: null },
+      all: emptyView(),
+      byModel: {},
+      account: { series: { sessions: [], permissionRequests: [], permissionDenied: [], interrupts: [], compactions: [] } },
+      buckets: [],
+      range: {},
       helpers,
     };
   }
@@ -43,9 +73,11 @@
     return data;
   }
 
-  function fetchLiveSync(days) {
+  function fetchLiveSync(days, granularity) {
     const xhr = new XMLHttpRequest();
-    xhr.open("GET", "/api/ui?days=" + encodeURIComponent(days), false);
+    let url = "/api/ui?days=" + encodeURIComponent(days);
+    if (granularity) url += "&granularity=" + encodeURIComponent(granularity);
+    xhr.open("GET", url, false);
     xhr.send(null);
     if (xhr.status !== 200) throw new Error("HTTP " + xhr.status);
     const body = JSON.parse(xhr.responseText);
@@ -54,6 +86,7 @@
 
   const params = new URLSearchParams(window.location.search);
   const days = parseInt(params.get("days") || "90", 10) || 90;
+  const granularity = params.get("granularity") || "";
 
   let state = "ok";
   let data;
@@ -62,7 +95,7 @@
     data = buildSynthetic(helpers, days);
   } else {
     try {
-      data = adaptLive(fetchLiveSync(days));
+      data = adaptLive(fetchLiveSync(days, granularity));
       if (!data.N) state = "empty";
     } catch (err) {
       state = "error";
@@ -174,17 +207,99 @@
       return arr;
     })();
 
-    return {
-      N, days,
+    // metrics-v3 shape parity for ?demo=1 so the status hero, model toggle, and
+    // rate-limit rework render under demo exactly as they do off live /api/ui.
+    const r4 = (v) => (Number.isFinite(v) ? Math.round(v * 1e4) / 1e4 : 0);
+    const meanTail = (a, w, off) => {
+      const end = a.length - (off || 0);
+      const s = a.slice(Math.max(0, end - w), end);
+      return s.length ? s.reduce((x, y) => x + y, 0) / s.length : 0;
+    };
+    const roll = (a, w) => {
+      const win = w || 14;
+      const cur = meanTail(a, win, 0), prev = meanTail(a, win, win), change = cur - prev;
+      return { current: r4(cur), previous: r4(prev), change: r4(change), changeRatio: prev === 0 ? null : r4(change / Math.abs(prev)) };
+    };
+    const toolErr = toolMix.reduce((a, t) => a + t.count * t.errRate, 0) / toolMix.reduce((a, t) => a + t.count, 0);
+    const allRolling = {
+      friction: roll(frictionTotal.map((v) => v / 100)),
+      cacheHit: roll(cacheHit),
+      reasoningShare: roll(reasoningShare),
+      thinkingShare: roll(thinkingShare),
+      toolError: { current: r4(toolErr), previous: r4(toolErr), change: 0, changeRatio: 0 },
+      toolsPerMessage: roll(toolsPerMsg),
+      avgTurnMs: roll(turnDuration.map((v) => v * 1000)),
+      avgTtftMs: roll(ttft),
+      avgToolLatencyMs: roll(toolLatency),
+      throughput: roll(throughput),
+      tokensPerDay: roll(tokensTotal),
+      sessionsPerDay: roll(sessions),
+      messagesPerDay: roll(messages),
+    };
+    function statusFrom(rolling) {
+      const fr = rolling.friction.current, ch = rolling.cacheHit.current, te = rolling.toolError.current;
+      const degraded = fr > 0.085 || ch < 0.6 || te > 0.09;
+      return {
+        verdict: degraded ? "degraded" : "healthy",
+        signals: {
+          friction: { value: fr, threshold: 0.085, degraded: fr > 0.085 },
+          cache: { value: ch, threshold: 0.6, degraded: ch < 0.6 },
+          toolError: { value: te, threshold: 0.09, degraded: te > 0.09 },
+        },
+      };
+    }
+    const flatSeries = {
       friction: { total: frictionTotal, user: frictionUser, assistant: frictionAssistant, t1: friction1pt, t2: friction2pt },
       activity: { sessions, turns, messages, userMsgs, asstMsgs, interrupts, compactions },
       tokens: { total: tokensTotal, comp, perSession: tokensPerSession },
       cache: { hit: cacheHit },
       reasoning: { codex: reasoningShare, claude: thinkingShare },
       tools: { perMsg: toolsPerMsg, mix: toolMix },
-      models,
       timing: { turnDuration, ttft, throughput, toolLatency },
-      limits: { windowUsedPct: 0.71, weeklyUsedPct: 0.43, burnRate: 1.86e6, windowHistory },
+    };
+    const totalModelTokens = models.reduce((a, b) => a + b.tokens, 0) || 1;
+    const totalTurns = turns.reduce((a, b) => a + b, 0);
+    const modelIndex = models.map((m) => ({
+      id: m.name, name: m.name, tokens: m.tokens,
+      attributedTurns: Math.round(totalTurns * (m.tokens / totalModelTokens)),
+    }));
+    const byModel = {};
+    models.forEach((m) => {
+      const share = m.tokens / totalModelTokens;
+      const scale = (a) => a.map((v) => Math.round(v * share * 1000) / 1000);
+      byModel[m.name] = {
+        series: Object.assign({}, flatSeries, {
+          activity: { sessions: scale(sessions), turns: scale(turns), messages: scale(messages), userMsgs: scale(userMsgs), asstMsgs: scale(asstMsgs), interrupts: scale(interrupts), compactions: scale(compactions) },
+          tokens: { total: scale(tokensTotal), comp, perSession: tokensPerSession },
+        }),
+        aggregates: { tools: toolMix },
+        rolling: allRolling,
+        status: statusFrom(allRolling),
+        coverage: { model: m.name, turns: r4(share), tokens: r4(share) },
+      };
+    });
+    const zeros = sessions.map(() => 0);
+
+    return {
+      N, days,
+      friction: flatSeries.friction,
+      activity: flatSeries.activity,
+      tokens: flatSeries.tokens,
+      cache: flatSeries.cache,
+      reasoning: flatSeries.reasoning,
+      tools: flatSeries.tools,
+      models: modelIndex,
+      timing: flatSeries.timing,
+      limits: {
+        windowUsedPct: 0.71, weeklyUsedPct: 0.43, burnRate: 1.86e6, windowHistory,
+        fiveHour: { kind: "5h", usedPercent: 71, burnPctPointsPerHour: 14.2, percentTimeToExhaustHrs: 2.1, timeToResetHrs: 3.4, resetsFirst: true, localTokensObserved: 0, localTokenBurnPerHour: null, localAllowanceEstimate: null, localTimeToExhaustHrs: null, localAllowanceEstimateRolling: null, sampledAt: null, resetsAt: null },
+        weekly: { kind: "weekly", usedPercent: 43, burnPctPointsPerHour: 1.1, percentTimeToExhaustHrs: 51.8, timeToResetHrs: 96, resetsFirst: false, localTokensObserved: 0, localTokenBurnPerHour: null, localAllowanceEstimate: null, localTimeToExhaustHrs: null, localAllowanceEstimateRolling: null, sampledAt: null, resetsAt: null },
+      },
+      all: { series: flatSeries, aggregates: { tools: toolMix, models: modelIndex }, rolling: allRolling, status: statusFrom(allRolling), coverage: {} },
+      byModel,
+      account: { series: { sessions, permissionRequests: zeros, permissionDenied: zeros, interrupts, compactions } },
+      buckets: [],
+      range: { days: N, granularity: "day", timezone: "local" },
       helpers: sharedHelpers,
     };
   }

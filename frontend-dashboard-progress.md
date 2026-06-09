@@ -41,7 +41,7 @@ does **not** wait on them.
 
 | Phase | Harn plan | Status | Commit | Notes |
 | --- | --- | --- | --- | --- |
-| FE-A. Payload plumbing (`data.js`) | `frontend-fe-a-payload-plumbing` | planned | — | Carry `all`/`byModel`/`models`/`account`/`rolling`/`status`/reworked `limits`/`buckets`; send `?granularity`; demo-mode parity. |
+| FE-A. Payload plumbing (`data.js`) | `frontend-fe-a-payload-plumbing` | complete | phase commit | Carry `all`/`byModel`/`models`/`account`/`rolling`/`status`/reworked `limits`/`buckets`; send `?granularity`; demo-mode parity. |
 | FE-B. Rolling KPIs + server status | `frontend-fe-b-rolling-status` | planned | — | Hero verdict + KPI headlines/deltas from `all.status`/`all.rolling`; remove hardcoded meta/narrative. |
 | FE-C. Rate-limit rework (KPI-only burn) | `frontend-fe-c-rate-limits` | planned | — | Lead with time-to-exhaustion + reset; burn rate is a current KPI (no sparkline until backlog #7). |
 | FE-D. Model toggle | `frontend-fe-d-model-toggle` | planned | — | `models` selector; thread selected model through every section; label hygiene. |
