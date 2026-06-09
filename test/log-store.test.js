@@ -26,10 +26,11 @@ function tempBase() {
 }
 
 // harn:assume daily-metrics-log-schema ref=store-tests
-test('creates a schema v2 daily metrics log', () => {
+test('creates a schema v3 daily metrics log', () => {
   const log = createDailyLog('2026-06-08', new Date('2026-06-08T02:00:00.000Z'));
 
   assert.deepEqual(Object.keys(log).sort(), [
+    'by_model',
     'date',
     'matches',
     'model_tokens',
@@ -44,7 +45,7 @@ test('creates a schema v2 daily metrics log', () => {
     'updated_at',
     'windows',
   ]);
-  assert.equal(log.schema_version, 2);
+  assert.equal(log.schema_version, 3);
   assert.equal(log.date, '2026-06-08');
   assert.equal(log.totals.turns, 0);
   assert.equal(log.totals.compactions, 0);
@@ -108,7 +109,7 @@ test('ensures and reads a daily log file', () => {
   assert.equal(readDailyLog(date, options).date, date);
 });
 
-test('normalizes v1 daily logs into schema v2 metrics fields', () => {
+test('normalizes v1 daily logs into schema v3 metrics fields', () => {
   const baseDir = tempBase();
   const date = '2026-06-08';
   const normalized = normalizeDailyLog({
@@ -132,7 +133,7 @@ test('normalizes v1 daily logs into schema v2 metrics fields', () => {
   writeDailyLog(normalized, { baseDir });
   const fileText = fs.readFileSync(dailyLogPath(date, { baseDir }), 'utf8');
 
-  assert.equal(normalized.schema_version, 2);
+  assert.equal(normalized.schema_version, 3);
   assert.equal(fileText.includes('sanitized raw prompt'), false);
   assert.equal(fileText.includes('sanitized command'), false);
   assert.equal(fileText.includes('/tmp/private'), false);
@@ -143,6 +144,52 @@ test('normalizes v1 daily logs into schema v2 metrics fields', () => {
   assert.equal(readDailyLog(date, { baseDir }).model_tokens['hf:moonshotai/Kimi-K2.6'].output, 7);
   assert.equal(readDailyLog(date, { baseDir }).windows[0].used_percent, 0);
 });
+
+// harn:assume per-model-daily-log-schema ref=store-model-tests
+test('normalizes and additively merges attributable per-model slices', () => {
+  const first = emptyIncrement();
+  first.by_model['gpt-5.4'] = {
+    totals: { sessions: 9, turns: 1, user_messages: 1, tool_calls: 2 },
+    matches: { user_1pt: { events: 1, line_hits: 2 } },
+    tokens: { input: 100, output: 20, total: 120 },
+    tool_calls_by_name: { Read: 2 },
+    timings_ms: { turn_sum: 500, turn_count: 1 },
+  };
+  first.by_model['/private/model-path'] = {
+    totals: { turns: 1 },
+    tokens: { total: 10 },
+  };
+
+  const second = applyIncrement(applyIncrement(createDailyLog('2026-06-08'), first), first);
+
+  assert.equal(second.by_model['gpt-5.4'].totals.turns, 2);
+  assert.equal(second.by_model['gpt-5.4'].totals.user_messages, 2);
+  assert.equal(second.by_model['gpt-5.4'].totals.sessions, undefined);
+  assert.equal(second.by_model['gpt-5.4'].matches.user_1pt.line_hits, 4);
+  assert.equal(second.by_model['gpt-5.4'].tokens.total, 240);
+  assert.equal(second.by_model['gpt-5.4'].tool_calls_by_name.Read, 4);
+  assert.equal(second.by_model['gpt-5.4'].timings_ms.turn_sum, 1000);
+  assert.equal(second.by_model.unknown.totals.turns, 2);
+  assert.equal(second.model_tokens['gpt-5.4'].total, 240);
+  assert.equal(second.model_tokens.unknown.total, 20);
+});
+
+test('seeds v3 per-model token slices from legacy model_tokens', () => {
+  const normalized = normalizeDailyLog({
+    schema_version: 2,
+    date: '2026-06-08',
+    model_tokens: {
+      'gpt-5.4': { input: 10, output: 5, total: 15 },
+      '/private/model-path': { total: 99 },
+    },
+  });
+
+  assert.equal(normalized.by_model['gpt-5.4'].tokens.total, 15);
+  assert.equal(normalized.by_model['gpt-5.4'].totals.turns, 0);
+  assert.equal(normalized.by_model['/private/model-path'], undefined);
+  assert.equal(normalized.model_tokens['gpt-5.4'].total, 15);
+});
+// harn:end per-model-daily-log-schema
 // harn:end daily-metrics-log-schema
 
 // harn:assume daily-log-locking ref=lock-tests

@@ -137,4 +137,23 @@ test('UI data payload exposes only aggregate values and safe labels', () => {
   assert.equal(serialized.includes('../private-script'), false);
   assert.equal(serialized.includes('/home/user/model-path'), false);
 });
+
+test('per-model slices retain aggregate counters without retaining unsafe model labels', () => {
+  const baseDir = tempBase();
+  writeDailyLog({
+    schema_version: 3,
+    date: '2026-06-08',
+    by_model: {
+      'gpt-5.4': { totals: { turns: 1 }, tokens: { total: 10 } },
+      '/home/user/private-model': { totals: { turns: 2 }, tokens: { total: 20 } },
+    },
+  }, { baseDir });
+
+  const fileText = fs.readFileSync(dailyLogPath('2026-06-08', { baseDir }), 'utf8');
+  const log = readDailyLog('2026-06-08', { baseDir });
+
+  assert.equal(log.by_model['gpt-5.4'].totals.turns, 1);
+  assert.equal(log.by_model.unknown.totals.turns, 2);
+  assert.equal(fileText.includes('/home/user/private-model'), false);
+});
 // harn:end aggregate-only-safety-checks

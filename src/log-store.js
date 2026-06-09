@@ -4,7 +4,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 const TOTAL_KEYS = [
   'sessions',
@@ -17,6 +17,14 @@ const TOTAL_KEYS = [
   'permission_denied',
   'runtime_interrupts',
   'compactions',
+];
+
+const MODEL_TOTAL_KEYS = [
+  'turns',
+  'user_messages',
+  'assistant_messages',
+  'tool_calls',
+  'tool_failures',
 ];
 
 const MATCH_KEYS = [
@@ -84,6 +92,10 @@ function emptyTotals() {
   return Object.fromEntries(TOTAL_KEYS.map((key) => [key, 0]));
 }
 
+function emptyModelTotals() {
+  return Object.fromEntries(MODEL_TOTAL_KEYS.map((key) => [key, 0]));
+}
+
 function emptyMatches() {
   return Object.fromEntries(MATCH_KEYS.map((key) => [key, { events: 0, line_hits: 0 }]));
 }
@@ -144,6 +156,15 @@ function normalizeTotals(input) {
   const source = input && typeof input === 'object' && !Array.isArray(input) ? input : {};
   const totals = emptyTotals();
   for (const key of TOTAL_KEYS) {
+    totals[key] = numeric(source[key]);
+  }
+  return totals;
+}
+
+function normalizeModelTotals(input) {
+  const source = input && typeof input === 'object' && !Array.isArray(input) ? input : {};
+  const totals = emptyModelTotals();
+  for (const key of MODEL_TOTAL_KEYS) {
     totals[key] = numeric(source[key]);
   }
   return totals;
@@ -257,13 +278,88 @@ function mergeNumberMap(target, increment, options = {}) {
   }
 }
 
-function mergeModelTokens(target, increment) {
-  const normalized = normalizeModelTokens(increment);
-  for (const [model, tokens] of Object.entries(normalized)) {
-    target[model] ||= emptyTokens();
-    addCounters(target[model], tokens, TOKEN_KEYS);
+// harn:assume per-model-daily-log-schema ref=store-model-schema
+function emptyModelSlice() {
+  return {
+    totals: emptyModelTotals(),
+    matches: emptyMatches(),
+    tokens: emptyTokens(),
+    tool_output_chars: {},
+    tool_calls_by_name: {},
+    tool_failures_by_name: {},
+    timings_ms: emptyTimings(),
+    tool_latency_ms_by_name: {},
+  };
+}
+
+function normalizeModelSlice(input) {
+  const source = input && typeof input === 'object' && !Array.isArray(input) ? input : {};
+  return {
+    totals: normalizeModelTotals(source.totals),
+    matches: normalizeMatches(source.matches),
+    tokens: normalizeTokens(source.tokens),
+    tool_output_chars: normalizeNumberMap(source.tool_output_chars),
+    tool_calls_by_name: normalizeNumberMap(source.tool_calls_by_name),
+    tool_failures_by_name: normalizeNumberMap(source.tool_failures_by_name),
+    timings_ms: normalizeTimings(source.timings_ms),
+    tool_latency_ms_by_name: normalizeNumberMap(source.tool_latency_ms_by_name),
+  };
+}
+
+function mergeModelSlice(target, increment = {}) {
+  addCounters(target.totals, increment.totals, MODEL_TOTAL_KEYS);
+  for (const key of MATCH_KEYS) {
+    const matchInc = increment.matches && increment.matches[key] ? increment.matches[key] : {};
+    target.matches[key].events += numeric(matchInc.events);
+    target.matches[key].line_hits += numeric(matchInc.line_hits);
+  }
+  addCounters(target.tokens, increment.tokens, TOKEN_KEYS);
+  mergeNumberMap(target.tool_output_chars, increment.tool_output_chars);
+  mergeNumberMap(target.tool_calls_by_name, increment.tool_calls_by_name);
+  mergeNumberMap(target.tool_failures_by_name, increment.tool_failures_by_name);
+  addCounters(target.timings_ms, increment.timings_ms, TIMING_KEYS);
+  mergeNumberMap(target.tool_latency_ms_by_name, increment.tool_latency_ms_by_name);
+  return target;
+}
+
+function normalizeByModel(input) {
+  const output = {};
+  const source = input && typeof input === 'object' && !Array.isArray(input) ? input : {};
+  for (const [model, counters] of Object.entries(source)) {
+    const safeModel = sanitizeLabel(model, { allowSlash: true }) || 'unknown';
+    output[safeModel] ||= emptyModelSlice();
+    mergeModelSlice(output[safeModel], normalizeModelSlice(counters));
+  }
+  return output;
+}
+
+function byModelFromModelTokens(input) {
+  const output = {};
+  for (const [model, tokens] of Object.entries(normalizeModelTokens(input))) {
+    output[model] = emptyModelSlice();
+    output[model].tokens = tokens;
+  }
+  return output;
+}
+
+function projectModelTokens(byModel = {}) {
+  const output = {};
+  for (const [model, slice] of Object.entries(normalizeByModel(byModel))) {
+    if (TOKEN_KEYS.some((key) => slice.tokens[key] > 0)) {
+      output[model] = slice.tokens;
+    }
+  }
+  return output;
+}
+
+function mergeByModel(target, increment) {
+  const normalized = normalizeByModel(increment);
+  for (const [model, slice] of Object.entries(normalized)) {
+    target[model] ||= emptyModelSlice();
+    mergeModelSlice(target[model], slice);
   }
 }
+// harn:end per-model-daily-log-schema
 
 function ensureMetricContainers(target) {
   target.totals = normalizeTotals(target.totals);
@@ -272,7 +368,8 @@ function ensureMetricContainers(target) {
   target.tool_output_chars = normalizeNumberMap(target.tool_output_chars);
   target.tool_calls_by_name = normalizeNumberMap(target.tool_calls_by_name);
   target.tool_failures_by_name = normalizeNumberMap(target.tool_failures_by_name);
-  target.model_tokens = normalizeModelTokens(target.model_tokens);
+  target.by_model = normalizeByModel(target.by_model);
+  target.model_tokens = projectModelTokens(target.by_model);
   target.timings_ms = normalizeTimings(target.timings_ms);
   target.tool_latency_ms_by_name = normalizeNumberMap(target.tool_latency_ms_by_name);
   target.windows = normalizeWindows(target.windows);
@@ -292,6 +389,7 @@ function createDailyLog(date = localDate(), now = new Date()) {
     tool_output_chars: {},
     tool_calls_by_name: {},
     tool_failures_by_name: {},
+    by_model: {},
     model_tokens: {},
     timings_ms: emptyTimings(),
     tool_latency_ms_by_name: {},
@@ -301,6 +399,10 @@ function createDailyLog(date = localDate(), now = new Date()) {
 
 function normalizeDailyLog(input, date = localDate(), now = new Date()) {
   const source = input && typeof input === 'object' ? input : {};
+  const normalizedByModel = normalizeByModel(source.by_model);
+  const byModel = Object.keys(normalizedByModel).length > 0
+    ? normalizedByModel
+    : byModelFromModelTokens(source.model_tokens);
   const log = {
     schema_version: SCHEMA_VERSION,
     date: source.date || date,
@@ -311,7 +413,8 @@ function normalizeDailyLog(input, date = localDate(), now = new Date()) {
     tool_output_chars: source.tool_output_chars || {},
     tool_calls_by_name: source.tool_calls_by_name || {},
     tool_failures_by_name: source.tool_failures_by_name || {},
-    model_tokens: source.model_tokens || {},
+    by_model: byModel,
+    model_tokens: {},
     timings_ms: source.timings_ms || {},
     tool_latency_ms_by_name: source.tool_latency_ms_by_name || {},
     windows: source.windows || [],
@@ -328,6 +431,7 @@ function emptyIncrement() {
     tool_output_chars: {},
     tool_calls_by_name: {},
     tool_failures_by_name: {},
+    by_model: {},
     model_tokens: {},
     timings_ms: emptyTimings(),
     tool_latency_ms_by_name: {},
@@ -349,7 +453,14 @@ function mergeIncrementFields(target, increment = {}) {
   mergeNumberMap(target.tool_output_chars, increment.tool_output_chars);
   mergeNumberMap(target.tool_calls_by_name, increment.tool_calls_by_name);
   mergeNumberMap(target.tool_failures_by_name, increment.tool_failures_by_name);
-  mergeModelTokens(target.model_tokens, increment.model_tokens);
+  const normalizedByModel = normalizeByModel(increment.by_model);
+  mergeByModel(
+    target.by_model,
+    Object.keys(normalizedByModel).length > 0
+      ? normalizedByModel
+      : byModelFromModelTokens(increment.model_tokens)
+  );
+  target.model_tokens = projectModelTokens(target.by_model);
   addCounters(target.timings_ms, increment.timings_ms, TIMING_KEYS);
   mergeNumberMap(target.tool_latency_ms_by_name, increment.tool_latency_ms_by_name);
   target.windows.push(...normalizeWindows(increment.windows));
@@ -455,6 +566,7 @@ function updateDailyLog(date = localDate(), increment = emptyIncrement(), option
 
 module.exports = {
   MATCH_KEYS,
+  MODEL_TOTAL_KEYS,
   SCHEMA_VERSION,
   TIMING_KEYS,
   TOKEN_KEYS,
@@ -466,6 +578,7 @@ module.exports = {
   dailyLockPath,
   dailyLogPath,
   emptyIncrement,
+  emptyModelSlice,
   emptyTimings,
   emptyTokens,
   ensureDailyLog,
@@ -473,12 +586,15 @@ module.exports = {
   locksDir,
   logsDir,
   mergeIncrementFields,
+  normalizeByModel,
   normalizeDailyLog,
+  normalizeModelSlice,
   normalizeModelTokens,
   normalizeNumberMap,
   normalizeTimings,
   normalizeTokens,
   normalizeWindows,
+  projectModelTokens,
   readDailyLog,
   releaseDailyLock,
   updateDailyLog,

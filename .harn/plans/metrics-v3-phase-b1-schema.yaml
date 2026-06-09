@@ -1,0 +1,82 @@
+id: metrics-v3-phase-b1-schema
+title: Add schema v3 per-model metric slices
+assumptions:
+  retire: []
+  create:
+    - id: per-model-daily-log-schema
+      title: Per-model daily log schema
+      statement: Schema v3 daily logs store model-attributable aggregate counters in
+        sanitized `by_model` metric slices while account-scoped counters and
+        rate-limit windows remain global, and `model_tokens` is derived as a
+        compatibility projection, so model views do not fabricate ownership and
+        v1/v2 logs still read safely.
+      reason: Model-filtered metrics need additive per-model storage with explicit
+        attribution boundaries and backward compatibility.
+      depends_on:
+        - daily-metrics-log-schema
+        - local-aggregate-privacy
+  reviewed:
+    - id: daily-metrics-log-schema
+      outcome: unchanged
+      reason: Daily logs remain date-scoped aggregate counters with numeric metrics,
+        safe labels, and append-only window samples.
+    - id: local-aggregate-privacy
+      outcome: unchanged
+      reason: Per-model slices contain only numeric aggregates and sanitized
+        model/tool labels.
+    - id: aggregate-only-safety-checks
+      outcome: unchanged
+      reason: Privacy tests continue to reject raw content and path-like labels from
+        persisted logs and API-shaped data.
+    - id: numeric-transcript-extractors
+      outcome: unchanged
+      reason: Extractors are not changed in this phase and continue producing schema
+        v2-compatible root increments.
+    - id: historical-backfill-numeric-metrics
+      outcome: unchanged
+      reason: Backfill producers are not changed in this phase and their increments
+        normalize into schema v3 safely.
+    - id: live-hook-numeric-tail-integration
+      outcome: unchanged
+      reason: Live tail producers are not changed in this phase and their increments
+        normalize into schema v3 safely.
+anchors:
+  per-model-daily-log-schema:
+    spec-model-attribution:
+      action: change
+      reason: Document model-attributable versus account-scoped persistence behavior.
+    store-model-schema:
+      action: change
+      reason: Add schema v3 model-slice normalization, merge, and compatibility
+        projection behavior.
+    store-model-tests:
+      action: change
+      reason: Verify schema v3 defaults, v2 compatibility, safe labels, and additive
+        model merges.
+    progress-phase-b1:
+      action: change
+      reason: Track completion of the schema v3 phase.
+  daily-metrics-log-schema:
+    store-schema:
+      action: change
+      reason: Bump the daily log schema and include the additive by_model block.
+    store-tests:
+      action: change
+      reason: Update existing daily schema expectations for v3.
+  aggregate-only-safety-checks:
+    privacy-tests:
+      action: change
+      reason: Verify by_model sanitization and aggregate-only persistence.
+  local-aggregate-privacy:
+    spec-privacy-storage:
+      action: change
+      reason: Clarify that sanitized per-model aggregate slices remain allowed local
+        telemetry.
+files:
+  - SPEC.md
+  - src/log-store.js
+  - test/log-store.test.js
+  - test/privacy.test.js
+  - metrics-v3-progress.md
+applied:
+  applied_at: 2026-06-09T01:15:39.761Z

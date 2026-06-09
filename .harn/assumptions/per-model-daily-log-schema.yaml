@@ -1,0 +1,13 @@
+id: per-model-daily-log-schema
+hash: a-1f294d3e64f6
+title: Per-model daily log schema
+state: active
+statement: Schema v3 daily logs store model-attributable aggregate counters in
+  sanitized `by_model` metric slices while account-scoped counters and
+  rate-limit windows remain global, and `model_tokens` is derived as a
+  compatibility projection, so model views do not fabricate ownership and v1/v2
+  logs still read safely.
+depends_on:
+  - daily-metrics-log-schema
+  - local-aggregate-privacy
+created_by: metrics-v3-phase-b1-schema
