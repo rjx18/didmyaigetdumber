@@ -1,0 +1,15 @@
+id: ui-rate-limit-exhaustion-view
+hash: a-888f359bb622
+title: UI rate-limit section leads with time-to-exhaustion
+state: active
+statement: The dashboard Rate-limits section leads with the estimated
+  time-to-exhaustion (`percentTimeToExhaustHrs`) and time-to-reset for the 5h
+  and weekly windows from `/api/ui` `limits`, flags "resets first" when the
+  window resets before exhaustion, shows the current burn rate as a
+  point-in-time KPI with no sparkline (pending backend backlog item 7), and
+  surfaces the rolling allowance estimate only when non-null; these figures are
+  account-wide and are never filtered by the selected model.
+depends_on:
+  - ui-live-data-binding
+  - rate-limit-local-estimates
+created_by: frontend-fe-c-rate-limits

@@ -1,0 +1,33 @@
+id: frontend-fe-c-rate-limits
+title: Rework the rate-limit section around time-to-exhaustion
+assumptions:
+  retire: []
+  create:
+    - id: ui-rate-limit-exhaustion-view
+      title: UI rate-limit section leads with time-to-exhaustion
+      statement: The dashboard Rate-limits section leads with the estimated
+        time-to-exhaustion (`percentTimeToExhaustHrs`) and time-to-reset for the
+        5h and weekly windows from `/api/ui` `limits`, flags "resets first" when
+        the window resets before exhaustion, shows the current burn rate as a
+        point-in-time KPI with no sparkline (pending backend backlog item 7),
+        and surfaces the rolling allowance estimate only when non-null; these
+        figures are account-wide and are never filtered by the selected model.
+      reason: Raw window-used-% is low-value as a headline and the token allowance is
+        not knowable per machine; the backend already exposes account-accurate
+        percent-based time-to-exhaustion, which the section must lead with.
+      depends_on:
+        - ui-live-data-binding
+        - rate-limit-local-estimates
+  reviewed: []
+anchors:
+  ui-rate-limit-exhaustion-view:
+    ui-rate-limit-view:
+      action: change
+      reason: Add the RateLimits/WindowCard components that render time-to-exhaustion,
+        reset, used-%, burn KPI, and conditional rolling allowance.
+files:
+  - src/ui/sections.jsx
+  - src/ui/styles.css
+  - frontend-dashboard-progress.md
+applied:
+  applied_at: 2026-06-09T03:19:20.884Z

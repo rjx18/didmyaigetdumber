@@ -156,9 +156,9 @@ const SECTIONS = {
     items: [["Time to first token", "line"], ["Avg tool latency", "line / bars by tool"], ["Output tokens / sec", "line + KPI"]],
   },
   limits: {
-    title: "Rate limits", blurb: "Codex 5-hour and weekly windows — where we are against reset.",
-    chart: { title: "5h window usage", sub: "% of window consumed · samples toward reset", values: D.limits.windowHistory, fmt: "ratio", color: "accent", goodDir: null, now: () => (D.limits.windowUsedPct * 100).toFixed(0) + "%" },
-    items: [["Current window used %", "radial gauge"], ["Burn rate", "sparkline + KPI"], ["Implied allowance estimate", "KPI"]],
+    title: "Rate limits", blurb: "Codex 5-hour and weekly windows — estimated time to exhaustion at the current burn, and time to reset.",
+    limits: true,
+    items: [["Burn-rate sparkline", "pending backend backlog item 7"], ["Token allowance estimate", "shown when local token deltas are observed"]],
   },
 };
 
@@ -212,6 +212,75 @@ function FeaturedChart({ chart }) {
   );
 }
 
+// harn:assume ui-rate-limit-exhaustion-view ref=ui-rate-limit-view
+// Account-wide rate-limit windows. Lead with percent-based time-to-exhaustion (the
+// reliable figure — token allowance is not knowable per machine); burn is a current
+// KPI (no sparkline until backend backlog item 7); rolling allowance shows only when
+// the backend could estimate it (local token deltas observed).
+function fmtHrs(h) {
+  if (h == null) return "—";
+  if (h < 1) return Math.round(h * 60) + "m";
+  if (h < 48) return h.toFixed(1) + "h";
+  return (h / 24).toFixed(1) + "d";
+}
+
+function WindowCard({ label, w }) {
+  if (!w) {
+    return (
+      <div className="lim-card">
+        <div className="lim-title">{label}</div>
+        <div className="lim-empty">no samples in range</div>
+      </div>
+    );
+  }
+  const primary = w.resetsFirst ? "resets first" : fmtHrs(w.percentTimeToExhaustHrs);
+  const sub = w.resetsFirst ? "window resets before exhaustion" : "to exhaustion at current burn";
+  return (
+    <div className="lim-card">
+      <div className="lim-title">{label}</div>
+      <div className="lim-primary num">{primary}</div>
+      <div className="lim-sub">{sub}</div>
+      <div className="lim-row"><span>Resets in</span><span className="num">{fmtHrs(w.timeToResetHrs)}</span></div>
+      <div className="lim-row"><span>Used</span><span className="num">{Math.round(w.usedPercent)}%</span></div>
+      <div className="lim-row"><span>Burn</span><span className="num">{w.burnPctPointsPerHour == null ? "—" : w.burnPctPointsPerHour.toFixed(1) + " pp/h"}</span></div>
+      {w.localAllowanceEstimateRolling != null && (
+        <div className="lim-row"><span>Allowance · 14d</span><span className="num">{FMT.tok(w.localAllowanceEstimateRolling)}</span></div>
+      )}
+    </div>
+  );
+}
+
+function RateLimits() {
+  const L = D.limits;
+  return (
+    <div>
+      <div className="chart-head">
+        <div>
+          <div className="chart-title">Time to exhaustion</div>
+          <div className="chart-sub">estimated hours until each window is exhausted at the current burn · account-wide</div>
+        </div>
+      </div>
+      <div className="lim-grid">
+        <WindowCard label="5-hour window" w={L.fiveHour} />
+        <WindowCard label="Weekly window" w={L.weekly} />
+      </div>
+      {L.windowHistory && L.windowHistory.length > 1 && (
+        <div style={{ marginTop: 24 }}>
+          <div className="chart-head">
+            <div>
+              <div className="chart-title">5h window usage</div>
+              <div className="chart-sub">% of window consumed across samples toward reset · context only</div>
+            </div>
+            <div className="chart-now num">{Math.round(L.windowUsedPct * 100)}%</div>
+          </div>
+          <MiniLine values={L.windowHistory} fmt="ratio" color="accent" height={140} goodDir={null} compare={1} />
+        </div>
+      )}
+    </div>
+  );
+}
+// harn:end ui-rate-limit-exhaustion-view
+
 function SectionDetail({ id }) {
   const cfg = SECTIONS[id];
   return (
@@ -221,6 +290,7 @@ function SectionDetail({ id }) {
         <p>{cfg.blurb}</p>
       </div>
       {cfg.chart && <FeaturedChart chart={cfg.chart} />}
+      {cfg.limits && <RateLimits />}
       {cfg.bars && <ToolBars />}
       <div className="planned">
         <div className="planned-label">Coming to this section</div>
