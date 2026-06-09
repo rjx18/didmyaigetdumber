@@ -76,6 +76,8 @@ const FMT = {
   num2: (v) => v.toFixed(2),
   sec: (v) => v.toFixed(1) + "s",
   ms: (v) => Math.round(v) + "ms",
+  secs: (v) => (v < 60000 ? (v / 1000).toFixed(1) + "s" : (v / 60000).toFixed(1) + "m"),
+  msAdaptive: (v) => (v >= 1000 ? (v / 1000).toFixed(1) + "s" : Math.round(v) + "ms"),
   tok: (v) => {
     if (v >= 1e9) return (v / 1e9).toFixed(2) + "B";
     if (v >= 1e6) return (v / 1e6).toFixed(1) + "M";
@@ -342,7 +344,7 @@ function HBars({ rows, max, fmt = "int", colorFor }) {
     <div className="hbars">
       {rows.map((r, i) => (
         <div className="hbar" key={i}>
-          <div className="hb-name">{r.name}</div>
+          <div className="hb-name" title={r.name}>{r.name}</div>
           <div className="hb-track">
             <div className="hb-fill" style={{ width: (r.value / m * 100) + "%", background: colorFor ? colorFor(r) : undefined }} />
           </div>

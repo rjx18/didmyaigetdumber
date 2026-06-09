@@ -1,0 +1,27 @@
+id: frontend-consolidation-p3-charts
+title: Fix chart units, labels, tool name overlap, and prune the severity stack
+assumptions:
+  retire: []
+  create: []
+  reviewed:
+    - id: ui-rolling-status-rendering
+      outcome: unchanged
+      reason: The KPI cards still read all.rolling; only the Time-to-first-token KPI's
+        display formatter changes from ms to seconds.
+    - id: ui-section-chart-grid
+      outcome: unchanged
+      reason: Chart dispatch is unchanged; only per-section chart specs (severity
+        stack removed, tool/latency labels and formatters) and the HBars label
+        are adjusted.
+anchors:
+  ui-rolling-status-rendering:
+    ui-rolling-kpis:
+      action: change
+      reason: Time-to-first-token KPI formats in seconds, not ms.
+files:
+  - src/ui/sections.jsx
+  - src/ui/charts.jsx
+  - src/ui/styles.css
+  - frontend-consolidation-progress.md
+applied:
+  applied_at: 2026-06-09T10:21:20.448Z

@@ -292,7 +292,7 @@ body {
 /* horizontal bars (tools etc.) */
 .hbars { display: grid; gap: 11px; }
 .hbar { display: grid; grid-template-columns: 130px 1fr auto; align-items: center; gap: 14px; }
-.hbar .hb-name { font-family: var(--mono); font-size: 12px; color: var(--ink); }
+.hbar .hb-name { font-family: var(--mono); font-size: 12px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .hbar .hb-track { height: 7px; border-radius: 4px; background: var(--hair2); overflow: hidden; }
 .hbar .hb-fill { height: 100%; border-radius: 4px; background: var(--faint); transition: width 0.6s cubic-bezier(.2,.8,.2,1); }
 .hbar .hb-val { font-family: var(--mono); font-size: 12px; color: var(--muted); }
