@@ -2,6 +2,30 @@
 const D = window.DATA;
 const H = D.helpers;
 
+// harn:assume ui-model-selector ref=ui-model-scope
+// A model "scope" carries the active series/rolling/status/tool-mix for the selected
+// model. "all" (or an unknown id) reads the aggregate; a model id reads byModel[id].
+// Rate-limit windows are account-wide and intentionally NOT part of the scope.
+const ALL_SERIES = {
+  friction: D.friction, activity: D.activity, tokens: D.tokens, cache: D.cache,
+  reasoning: D.reasoning, tools: D.tools, timing: D.timing,
+};
+function buildScope(model) {
+  const m = model && model !== "all" ? D.byModel[model] : null;
+  if (m) {
+    return {
+      model, series: m.series, rolling: m.rolling, status: m.status,
+      toolsMix: (m.aggregates && m.aggregates.tools) || (m.series.tools && m.series.tools.mix) || [],
+      coverage: m.coverage || null,
+    };
+  }
+  return {
+    model: "all", series: ALL_SERIES, rolling: D.all.rolling, status: D.all.status,
+    toolsMix: D.tools.mix, coverage: null,
+  };
+}
+// harn:end ui-model-selector
+
 /* ---------------- status (server-computed) ---------------- */
 // harn:assume ui-rolling-status-rendering ref=ui-status-hero
 const VERDICT_WORD = { healthy: "Healthy", degraded: "Degraded", "insufficient-data": "Insufficient data" };
@@ -32,8 +56,8 @@ function rangeLabel() {
   };
 }
 
-function Hero() {
-  const status = D.all.status;
+function Hero({ scope }) {
+  const status = scope.status;
   const ok = status.verdict === "healthy";
   const word = VERDICT_WORD[status.verdict] || "Unknown";
   const pulse = ok ? "ok ok-bg" : status.verdict === "degraded" ? "bad bad-bg" : "";
@@ -46,7 +70,7 @@ function Hero() {
           <span className={"status-pulse " + pulse} />
           <span className="status-word">{word}</span>
         </div>
-        <div className="status-reason">{statusReason(status, D.all.rolling)}</div>
+        <div className="status-reason">{statusReason(status, scope.rolling)}</div>
       </div>
       <div className="status-meta">
         <div>last {r.span} · live</div>
@@ -59,18 +83,18 @@ function Hero() {
 
 /* ---------------- headline metrics (clickable → route) ---------------- */
 // harn:assume ui-rolling-status-rendering ref=ui-rolling-kpis
-// `roll` keys into D.all.rolling (14-day window); `rollFx` maps rolling.current into
-// the unit the `fmt` expects (rolling friction/timing are ratios/ms). The sparkline
-// keeps the raw per-day `values` series.
+// `pick` selects the sparkline series from the active model scope; `roll` keys into
+// scope.rolling (14-day window); `rollFx` maps rolling.current into the unit the
+// `fmt` expects (rolling friction/timing are ratios/ms).
 const KPI_LIST = [
-  { label: "Friction rate", values: D.friction.total, roll: "friction", rollFx: (v) => v * 100, fmt: "pct1", goodDir: "down", section: "friction" },
-  { label: "Tokens / day", values: D.tokens.total, roll: "tokensPerDay", fmt: "tok", goodDir: null, section: "tokens" },
-  { label: "Cache hit", values: D.cache.hit, roll: "cacheHit", fmt: "ratio", goodDir: "up", section: "cache" },
-  { label: "Tools / msg", values: D.tools.perMsg, roll: "toolsPerMessage", fmt: "num2", goodDir: null, section: "tools" },
-  { label: "Avg turn", values: D.timing.turnDuration, roll: "avgTurnMs", rollFx: (v) => v / 1000, fmt: "sec", goodDir: "down", section: "timing" },
-  { label: "Throughput", values: D.timing.throughput, roll: "throughput", fmt: (v) => v.toFixed(0), unit: " tok/s", goodDir: "up", section: "timing" },
-  { label: "Time to first token", values: D.timing.ttft, roll: "avgTtftMs", fmt: "ms", goodDir: "down", section: "timing" },
-  { label: "Reasoning share", values: D.reasoning.codex, roll: "reasoningShare", fmt: "ratio", goodDir: null, section: "reasoning" },
+  { label: "Friction rate", pick: (s) => s.friction.total, roll: "friction", rollFx: (v) => v * 100, fmt: "pct1", goodDir: "down", section: "friction" },
+  { label: "Tokens / day", pick: (s) => s.tokens.total, roll: "tokensPerDay", fmt: "tok", goodDir: null, section: "tokens" },
+  { label: "Cache hit", pick: (s) => s.cache.hit, roll: "cacheHit", fmt: "ratio", goodDir: "up", section: "cache" },
+  { label: "Tools / msg", pick: (s) => s.tools.perMsg, roll: "toolsPerMessage", fmt: "num2", goodDir: null, section: "tools" },
+  { label: "Avg turn", pick: (s) => s.timing.turnDuration, roll: "avgTurnMs", rollFx: (v) => v / 1000, fmt: "sec", goodDir: "down", section: "timing" },
+  { label: "Throughput", pick: (s) => s.timing.throughput, roll: "throughput", fmt: (v) => v.toFixed(0), unit: " tok/s", goodDir: "up", section: "timing" },
+  { label: "Time to first token", pick: (s) => s.timing.ttft, roll: "avgTtftMs", fmt: "ms", goodDir: "down", section: "timing" },
+  { label: "Reasoning share", pick: (s) => s.reasoning.codex, roll: "reasoningShare", fmt: "ratio", goodDir: null, section: "reasoning" },
 ];
 
 // Delta badge fed by the 14-day rolling changeRatio (current vs previous window).
@@ -86,16 +110,17 @@ function RollDelta({ ratio, goodDir }) {
   return <span className={"delta " + cls}>{arrow} {sign}{(dv * 100).toFixed(1)}%</span>;
 }
 
-function KPI({ item, onPick }) {
+function KPI({ item, scope, onPick }) {
   const fmtFn = typeof item.fmt === "function" ? item.fmt : FMT[item.fmt];
-  const r = D.all.rolling[item.roll] || { current: 0, changeRatio: 0 };
+  const r = scope.rolling[item.roll] || { current: 0, changeRatio: 0 };
   const cur = item.rollFx ? item.rollFx(r.current) : r.current;
+  const values = item.pick(scope.series);
   return (
     <button className="kpi" onClick={() => onPick(item.section)}>
       <div className="k-label">{item.label}</div>
       <div className="k-value num">{fmtFn(cur)}{item.unit && <span className="unit">{item.unit}</span>}</div>
       <div className="k-foot">
-        <div className="k-spark"><Spark values={item.values} color="ghost" height={30} /></div>
+        <div className="k-spark"><Spark values={values} color="ghost" height={30} /></div>
         <RollDelta ratio={r.changeRatio} goodDir={item.goodDir} />
       </div>
       <div className="k-more">See more <span className="arr">→</span></div>
@@ -104,7 +129,7 @@ function KPI({ item, onPick }) {
 }
 // harn:end ui-rolling-status-rendering
 
-function HeadlineMetrics({ onPick }) {
+function HeadlineMetrics({ scope, onPick }) {
   return (
     <>
       <div className="section-rule">
@@ -112,7 +137,7 @@ function HeadlineMetrics({ onPick }) {
         <h3>Headline metrics</h3>
       </div>
       <div className="kpis">
-        {KPI_LIST.map((it, i) => <KPI key={i} item={it} onPick={onPick} />)}
+        {KPI_LIST.map((it, i) => <KPI key={i} item={it} scope={scope} onPick={onPick} />)}
       </div>
     </>
   );
@@ -122,27 +147,27 @@ function HeadlineMetrics({ onPick }) {
 const SECTIONS = {
   friction: {
     title: "Friction", blurb: "How often turns go sideways — interrupts, retries, corrections — split by who caused it and how severe.",
-    chart: { title: "Friction rate", sub: "total · % of turns with a friction signal · last 90 days", values: D.friction.total, dates: D.days, fmt: "pct1", color: "accent", goodDir: "down", now: () => H.last(D.friction.total).toFixed(1) + "%" },
+    chart: { title: "Friction rate", sub: "total · % of turns with a friction signal", pick: (s) => s.friction.total, fmt: "pct1", color: "accent", goodDir: "down", now: (s) => H.last(s.friction.total).toFixed(1) + "%" },
     items: [["Friction by severity", "1pt vs 2pt tiers — stacked area"], ["User vs assistant split", "share of total friction"], ["Interrupts / retries per day", "bar"]],
   },
   activity: {
     title: "Activity", blurb: "Raw throughput of the system: how much conversation is happening and how it’s shaped.",
-    chart: { title: "Sessions per day", sub: "distinct sessions · last 90 days", values: D.activity.sessions, dates: D.days, fmt: "int", color: "ink", goodDir: null, now: () => FMT.int(H.last(D.activity.sessions)) },
+    chart: { title: "Sessions per day", sub: "distinct sessions", pick: (s) => s.activity.sessions, fmt: "int", color: "ink", goodDir: null, now: (s) => FMT.int(H.last(s.activity.sessions)) },
     items: [["Sessions · turns · messages / day", "grouped bar"], ["User vs assistant messages", "stacked bar"], ["Compactions per day", "KPI + bar"], ["Turns per session", "distribution"]],
   },
   tokens: {
     title: "Tokens", blurb: "Where the tokens go — by type, by model, and per session.",
-    chart: { title: "Tokens per day", sub: "all models · all token types · last 90 days", values: D.tokens.total, dates: D.days, fmt: "tok", color: "ink", goodDir: null, now: () => FMT.tok(H.last(D.tokens.total)) },
+    chart: { title: "Tokens per day", sub: "all token types", pick: (s) => s.tokens.total, fmt: "tok", color: "ink", goodDir: null, now: (s) => FMT.tok(H.last(s.tokens.total)) },
     items: [["Token composition", "input / output / cache / reasoning — stacked"], ["Per-model token mix", "stacked bar"], ["Tokens per session", "distribution"]],
   },
   cache: {
     title: "Cache", blurb: "Cache economics — how much we’re reading back vs paying to create.",
-    chart: { title: "Cache hit ratio", sub: "cache-read ÷ (read + creation + fresh input)", values: D.cache.hit, dates: D.days, fmt: "ratio", color: "ink", goodDir: "up", now: () => (H.last(D.cache.hit) * 100).toFixed(1) + "%" },
+    chart: { title: "Cache hit ratio", sub: "cache-read ÷ (read + creation + fresh input)", pick: (s) => s.cache.hit, fmt: "ratio", color: "ink", goodDir: "up", now: (s) => (H.last(s.cache.hit) * 100).toFixed(1) + "%" },
     items: [["Read vs creation vs fresh input", "stacked bar"], ["Savings estimate", "KPI"]],
   },
   reasoning: {
     title: "Reasoning", blurb: "Thinking budget — exact for Codex, estimated for Claude.",
-    chart: { title: "Reasoning-token share (Codex)", sub: "reasoning ÷ output tokens · exact · last 90 days", values: D.reasoning.codex, dates: D.days, fmt: "ratio", color: "accent", goodDir: null, now: () => (H.last(D.reasoning.codex) * 100).toFixed(1) + "%" },
+    chart: { title: "Reasoning-token share (Codex)", sub: "reasoning ÷ output tokens · exact", pick: (s) => s.reasoning.codex, fmt: "ratio", color: "accent", goodDir: null, now: (s) => (H.last(s.reasoning.codex) * 100).toFixed(1) + "%" },
     items: [["Thinking-char share (Claude)", "line + KPI · estimate"]],
   },
   tools: {
@@ -152,7 +177,7 @@ const SECTIONS = {
   },
   timing: {
     title: "Timing", blurb: "Latency from the user’s seat — how fast it starts, runs, and finishes.",
-    chart: { title: "Avg turn duration", sub: "wall-clock seconds per turn · last 90 days", values: D.timing.turnDuration, dates: D.days, fmt: "sec", color: "ink", goodDir: "down", now: () => H.last(D.timing.turnDuration).toFixed(1) + "s" },
+    chart: { title: "Avg turn duration", sub: "wall-clock seconds per turn", pick: (s) => s.timing.turnDuration, fmt: "sec", color: "ink", goodDir: "down", now: (s) => H.last(s.timing.turnDuration).toFixed(1) + "s" },
     items: [["Time to first token", "line"], ["Avg tool latency", "line / bars by tool"], ["Output tokens / sec", "line + KPI"]],
   },
   limits: {
@@ -178,17 +203,18 @@ function SubNav({ active, onChange }) {
   );
 }
 
-function ToolBars() {
-  const totalCalls = D.tools.mix.reduce((a, t) => a + t.count, 0);
-  const rows = [...D.tools.mix].sort((a, b) => b.count - a.count).map((t) => ({
-    name: t.name, value: t.count, label: (t.count / totalCalls * 100).toFixed(1) + "%",
+function ToolBars({ scope }) {
+  const mix = scope.toolsMix || [];
+  const totalCalls = mix.reduce((a, t) => a + t.count, 0);
+  const rows = [...mix].sort((a, b) => b.count - a.count).map((t) => ({
+    name: t.name, value: t.count, label: totalCalls ? (t.count / totalCalls * 100).toFixed(1) + "%" : "0%",
   }));
   return (
     <div>
       <div className="chart-head">
         <div>
           <div className="chart-title">Tool call mix</div>
-          <div className="chart-sub">share of all tool invocations · last 90 days</div>
+          <div className="chart-sub">share of all tool invocations</div>
         </div>
         <div className="chart-now num">{FMT.int(totalCalls)}</div>
       </div>
@@ -197,7 +223,8 @@ function ToolBars() {
   );
 }
 
-function FeaturedChart({ chart }) {
+function FeaturedChart({ chart, scope }) {
+  const values = chart.pick(scope.series);
   return (
     <div>
       <div className="chart-head">
@@ -205,9 +232,9 @@ function FeaturedChart({ chart }) {
           <div className="chart-title">{chart.title}</div>
           <div className="chart-sub">{chart.sub}</div>
         </div>
-        <div className="chart-now num">{chart.now()}</div>
+        <div className="chart-now num">{chart.now(scope.series)}</div>
       </div>
-      <MiniLine values={chart.values} dates={chart.dates} fmt={chart.fmt} color={chart.color} height={200} goodDir={chart.goodDir} />
+      <MiniLine values={values} dates={D.days} fmt={chart.fmt} color={chart.color} height={200} goodDir={chart.goodDir} />
     </div>
   );
 }
@@ -281,7 +308,7 @@ function RateLimits() {
 }
 // harn:end ui-rate-limit-exhaustion-view
 
-function SectionDetail({ id }) {
+function SectionDetail({ id, scope }) {
   const cfg = SECTIONS[id];
   return (
     <div className="page-section">
@@ -289,9 +316,9 @@ function SectionDetail({ id }) {
         <h2>{cfg.title}</h2>
         <p>{cfg.blurb}</p>
       </div>
-      {cfg.chart && <FeaturedChart chart={cfg.chart} />}
+      {cfg.chart && <FeaturedChart chart={cfg.chart} scope={scope} />}
       {cfg.limits && <RateLimits />}
-      {cfg.bars && <ToolBars />}
+      {cfg.bars && <ToolBars scope={scope} />}
       <div className="planned">
         <div className="planned-label">Coming to this section</div>
         {cfg.items.map((it, i) => (
@@ -308,4 +335,4 @@ function SectionDetail({ id }) {
   );
 }
 
-Object.assign(window, { Hero, HeadlineMetrics, SubNav, SectionDetail });
+Object.assign(window, { Hero, HeadlineMetrics, SubNav, SectionDetail, buildScope });

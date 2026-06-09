@@ -1,0 +1,55 @@
+id: frontend-fe-d-model-toggle
+title: Add a model toggle that scopes the dashboard to a selected model
+assumptions:
+  retire: []
+  create:
+    - id: ui-model-selector
+      title: UI model selector scopes sections to one model
+      statement: The dashboard top bar offers an "All models" default plus one entry
+        per model from `/api/ui` `models` (excluding the `<synthetic>`
+        pseudo-model and zero-token models, with friendly labels), persists the
+        selection in `localStorage`, and threads it through a single scope
+        object so the status hero, headline KPIs, and every detailed section
+        read the selected model's `byModel[id]` series/rolling/status while "All
+        models" reads the aggregate; the rate-limit windows stay account-wide
+        and are never model-scoped.
+      reason: Per-model attribution exists in the API but no UI surfaces it; users
+        must be able to filter the whole dashboard to one model without losing
+        the account-wide rate-limit view.
+      depends_on:
+        - ui-live-data-binding
+        - ui-rolling-status-rendering
+        - rolling-status-metrics-api
+  reviewed:
+    - id: ui-rolling-status-rendering
+      outcome: unchanged
+      reason: The hero verdict and KPI headlines/deltas still come from the
+        server-computed rolling/status blocks; this change only sources them
+        from the selected model's scope (all.* for "All models", byModel[id].*
+        otherwise) instead of always all.*, so the rendering contract is
+        unchanged.
+anchors:
+  ui-model-selector:
+    ui-model-scope:
+      action: change
+      reason: Add buildScope(model) mapping a selection to byModel[id] vs the
+        aggregate, keeping limits account-wide, and thread scope through
+        sections.
+    ui-model-selector-control:
+      action: change
+      reason: Add the top-bar model selector, localStorage persistence, label hygiene,
+        and scope threading into Hero/HeadlineMetrics/SectionDetail.
+  ui-rolling-status-rendering:
+    ui-status-hero:
+      action: change
+      reason: Hero reads status/rolling from the passed model scope instead of all.*.
+    ui-rolling-kpis:
+      action: change
+      reason: KPIs read their series and rolling from the passed model scope.
+files:
+  - src/ui/sections.jsx
+  - src/ui/app.jsx
+  - src/ui/styles.css
+  - frontend-dashboard-progress.md
+applied:
+  applied_at: 2026-06-09T03:27:07.728Z

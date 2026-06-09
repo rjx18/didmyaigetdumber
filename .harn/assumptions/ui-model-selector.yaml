@@ -1,0 +1,16 @@
+id: ui-model-selector
+hash: a-10b39ad9e38e
+title: UI model selector scopes sections to one model
+state: active
+statement: The dashboard top bar offers an "All models" default plus one entry
+  per model from `/api/ui` `models` (excluding the `<synthetic>` pseudo-model
+  and zero-token models, with friendly labels), persists the selection in
+  `localStorage`, and threads it through a single scope object so the status
+  hero, headline KPIs, and every detailed section read the selected model's
+  `byModel[id]` series/rolling/status while "All models" reads the aggregate;
+  the rate-limit windows stay account-wide and are never model-scoped.
+depends_on:
+  - ui-live-data-binding
+  - ui-rolling-status-rendering
+  - rolling-status-metrics-api
+created_by: frontend-fe-d-model-toggle

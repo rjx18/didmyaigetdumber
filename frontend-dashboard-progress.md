@@ -44,6 +44,6 @@ does **not** wait on them.
 | FE-A. Payload plumbing (`data.js`) | `frontend-fe-a-payload-plumbing` | complete | phase commit | Carry `all`/`byModel`/`models`/`account`/`rolling`/`status`/reworked `limits`/`buckets`; send `?granularity`; demo-mode parity. |
 | FE-B. Rolling KPIs + server status | `frontend-fe-b-rolling-status` | complete | phase commit | Hero verdict + KPI headlines/deltas from `all.status`/`all.rolling`; removed hardcoded meta/narrative. |
 | FE-C. Rate-limit rework (KPI-only burn) | `frontend-fe-c-rate-limits` | complete | phase commit | Lead with time-to-exhaustion + reset; burn rate is a current KPI (no sparkline until backlog #7). |
-| FE-D. Model toggle | `frontend-fe-d-model-toggle` | planned | — | `models` selector; thread selected model through every section; label hygiene. |
+| FE-D. Model toggle | `frontend-fe-d-model-toggle` | complete | phase commit | `models` selector; scope threads through hero/KPIs/sections; limits stay account-wide; label hygiene. |
 | FE-E. Granularity selector | `frontend-fe-e-granularity` | planned | — | `1h·day·week·2w·month` detailed control; gate `1h` to hourly retention. |
 | FE-F. Gaps / prune / polish | `frontend-fe-f-polish` | planned | — | Branding, prune unsupported elements, per-tool-latency deferred to backlog #6, docs, e2e. |

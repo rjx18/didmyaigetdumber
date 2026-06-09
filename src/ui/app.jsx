@@ -36,11 +36,57 @@ function DataNotice({ state }) {
 }
 // harn:end ui-live-data-binding
 
+// harn:assume ui-model-selector ref=ui-model-selector-control
+// Persisted model selection. Drops the <synthetic> pseudo-model and zero-token
+// models, friendly-names long ids, and keeps the choice in localStorage. The chosen
+// model is turned into a scope (window.buildScope) that drives every section.
+const MODEL_KEY = "ait_model";
+
+function friendlyModel(name) {
+  if (!name) return "unknown";
+  const slash = name.lastIndexOf("/");
+  return slash >= 0 ? name.slice(slash + 1) : name;
+}
+
+function modelOptions() {
+  const models = (window.DATA.models || [])
+    .filter((m) => m.id !== "<synthetic>" && m.tokens > 0)
+    .map((m) => ({ id: m.id, label: friendlyModel(m.name) }));
+  return [{ id: "all", label: "All models" }].concat(models);
+}
+
+function useModel() {
+  const options = modelOptions();
+  const valid = new Set(options.map((o) => o.id));
+  const stored = localStorage.getItem(MODEL_KEY);
+  const [model, set] = useState(stored && valid.has(stored) ? stored : "all");
+  const setModel = (v) => { localStorage.setItem(MODEL_KEY, v); set(v); };
+  return [model, setModel, options];
+}
+
+function ModelSelector({ model, options, coverage, onChange }) {
+  if (options.length <= 1) return null;   // only "All models" — nothing to toggle
+  const cov = model !== "all" && coverage && coverage.tokens != null
+    ? Math.round(coverage.tokens * 100) + "% of tokens" : null;
+  return (
+    <label className="model-select">
+      <span className="model-select-label">Model</span>
+      <select value={model} onChange={(e) => onChange(e.target.value)}>
+        {options.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+      </select>
+      {cov && <span className="model-cov num">{cov}</span>}
+    </label>
+  );
+}
+// harn:end ui-model-selector
+
 function App() {
   const dataState = window.DATA_STATE || "ok";
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
   const [section, setSection] = useState(() => localStorage.getItem("ait_section") || "friction");
+  const [model, setModel, modelOpts] = useModel();
   const detailRef = useRef(null);
+  const scope = dataState === "ok" ? window.buildScope(model) : null;
 
   useEffect(() => { localStorage.setItem("ait_section", section); }, [section]);
 
@@ -73,6 +119,9 @@ function App() {
             <span className="sub">/ ai-ops</span>
           </div>
           <span className="spacer" />
+          {dataState === "ok" && (
+            <ModelSelector model={model} options={modelOpts} coverage={scope && scope.coverage} onChange={setModel} />
+          )}
           <button className="ghost-btn" onClick={() => setTweak("dark", !t.dark)}>
             {t.dark ? "◑ dark" : "◐ light"}
           </button>
@@ -83,11 +132,11 @@ function App() {
         <div className="page wrap">
           {dataState === "ok" ? (
             <>
-              <Hero />
-              <HeadlineMetrics onPick={goTo} />
+              <Hero scope={scope} />
+              <HeadlineMetrics scope={scope} onPick={goTo} />
               <div ref={detailRef} className="detail">
                 <SubNav active={section} onChange={setSection} />
-                <SectionDetail id={section} />
+                <SectionDetail id={section} scope={scope} />
               </div>
             </>
           ) : (
