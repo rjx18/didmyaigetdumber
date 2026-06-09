@@ -138,10 +138,24 @@ function createServer(options = {}) {
     // harn:end local-metrics-api
 
     // harn:assume rolling-status-metrics-api ref=server-ui-api
+    // harn:assume granularity-bucketing-api ref=server-granularity
     if (url.pathname === '/api/ui') {
-      json(res, { data: buildUiData({ ...options, days: url.searchParams.get('days') || options.days }) });
+      try {
+        json(res, { data: buildUiData({
+          ...options,
+          days: url.searchParams.get('days') || options.days,
+          granularity: url.searchParams.get('granularity') || options.granularity,
+        }) });
+      } catch (error) {
+        if (error && error.code === 'INVALID_GRANULARITY') {
+          send(res, 400, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' }, `${JSON.stringify({ error: error.message })}\n`);
+          return;
+        }
+        throw error;
+      }
       return;
     }
+    // harn:end granularity-bucketing-api
     // harn:end rolling-status-metrics-api
 
     if (url.pathname === '/health') {

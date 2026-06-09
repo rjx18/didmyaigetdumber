@@ -1,0 +1,13 @@
+id: granularity-bucketing-api
+hash: a-c64a40367dc7
+title: Granularity bucketing API
+state: active
+statement: The GET /api/ui endpoint validates granularity as day, week, 2w, or
+  month and returns local-calendar buckets whose volumes are summed and whose
+  rates, shares, and timings are re-derived from summed raw components, with ISO
+  Monday weeks, a documented fixed two-week anchor, and explicit partial bucket
+  boundaries.
+depends_on:
+  - rolling-status-metrics-api
+  - metric-aggregation-core
+created_by: metrics-v3-phase-b7-bucketing

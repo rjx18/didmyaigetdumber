@@ -6,7 +6,7 @@ const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
 
-const { buildUiData } = require('../src/ui-data');
+const { bucketKey, buildUiData } = require('../src/ui-data');
 const { createDailyLog, writeDailyLog } = require('../src/log-store');
 
 function tempBase() {
@@ -149,4 +149,35 @@ test('builds empty payload for an empty range without throwing', () => {
   assert.equal(data.limits.windowUsedPct, 0);
   assert.deepEqual(data.limits.windowHistory, []);
 });
+
+// harn:assume granularity-bucketing-api ref=bucket-tests
+test('buckets raw daily logs before deriving week rates and volumes', () => {
+  const baseDir = tempBase();
+  writeAggregate('2026-06-01', { baseDir }, {
+    totals: { user_messages: 10 },
+    user_1pt: { events: 1 },
+    tokens: { total: 100 },
+  });
+  writeAggregate('2026-06-02', { baseDir }, {
+    totals: { user_messages: 2 },
+    user_1pt: { events: 1 },
+    tokens: { total: 50 },
+  });
+
+  const data = buildUiData({ baseDir, days: 2, asOf: '2026-06-02', granularity: 'week' });
+
+  assert.deepEqual(data.days, ['2026-06-01']);
+  assert.deepEqual(data.buckets, [{ key: '2026-06-01', start: '2026-06-01', end: '2026-06-02' }]);
+  assert.equal(data.friction.total[0], 16.67);
+  assert.equal(data.tokens.total[0], 150);
+});
+
+test('uses stable ISO week, two-week, and month bucket keys', () => {
+  assert.equal(bucketKey('2026-06-07', 'week'), '2026-06-01');
+  assert.equal(bucketKey('2026-06-08', 'week'), '2026-06-08');
+  assert.equal(bucketKey('2026-06-08', '2w'), bucketKey('2026-06-21', '2w'));
+  assert.notEqual(bucketKey('2026-06-21', '2w'), bucketKey('2026-06-22', '2w'));
+  assert.equal(bucketKey('2026-06-20', 'month'), '2026-06-01');
+});
+// harn:end granularity-bucketing-api
 // harn:end rolling-status-metrics-api

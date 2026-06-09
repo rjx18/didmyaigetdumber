@@ -29,5 +29,7 @@
 <!-- harn:assume rolling-status-metrics-api ref=progress-phase-b6 -->
 | B6. UI API model views + rolling status | `metrics-v3-phase-b6-ui-api` | complete | phase commit | Added calendar rolling/status, model views, account fields, and corrected limits. |
 <!-- harn:end rolling-status-metrics-api -->
-| B7. Day-and-coarser bucketing | `metrics-v3-phase-b7-bucketing` | planned | — | |
+<!-- harn:assume granularity-bucketing-api ref=progress-phase-b7 -->
+| B7. Day-and-coarser bucketing | `metrics-v3-phase-b7-bucketing` | complete | phase commit | Added validated server-side day/week/2w/month buckets. |
+<!-- harn:end granularity-bucketing-api -->
 | B8. Hourly storage + API | `metrics-v3-phase-b8-hourly` | planned | — | |

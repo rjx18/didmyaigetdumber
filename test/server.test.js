@@ -155,6 +155,21 @@ test('serves dashboard UI and API over HTTP', async () => {
 });
 // harn:end local-dashboard-server
 
+// harn:assume granularity-bucketing-api ref=server-granularity-tests
+test('rejects unsupported UI API granularity', async () => {
+  const server = createServer({ baseDir: tempBase() });
+  const port = await listen(server);
+  try {
+    const response = await fetch(`http://127.0.0.1:${port}/api/ui?granularity=quarter`);
+    const payload = await response.json();
+    assert.equal(response.status, 400);
+    assert.match(payload.error, /invalid granularity/);
+  } finally {
+    await close(server);
+  }
+});
+// harn:end granularity-bucketing-api
+
 // harn:assume ui-static-asset-serving ref=server-tests-static
 test('serves vendored static UI assets and blocks path escapes', async () => {
   const baseDir = tempBase();

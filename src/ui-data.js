@@ -200,6 +200,63 @@ function modelCoverageFor(model, modelAggregate, rootAggregate) {
   };
 }
 
+// harn:assume granularity-bucketing-api ref=bucket-builder
+const VALID_GRANULARITIES = new Set(['day', 'week', '2w', 'month']);
+const TWO_WEEK_ANCHOR = '1970-01-05';
+
+function parseGranularity(value) {
+  const granularity = value || 'day';
+  if (!VALID_GRANULARITIES.has(granularity)) {
+    const error = new RangeError(`invalid granularity: ${granularity}`);
+    error.code = 'INVALID_GRANULARITY';
+    throw error;
+  }
+  return granularity;
+}
+
+function utcDayNumber(date) {
+  const [year, month, day] = date.split('-').map(Number);
+  return Math.floor(Date.UTC(year, month - 1, day) / 86400000);
+}
+
+function dateFromUtcDay(dayNumber) {
+  return new Date(dayNumber * 86400000).toISOString().slice(0, 10);
+}
+
+function bucketKey(date, granularity) {
+  if (granularity === 'day') {
+    return date;
+  }
+  if (granularity === 'month') {
+    return `${date.slice(0, 7)}-01`;
+  }
+  const day = utcDayNumber(date);
+  const weekday = new Date(day * 86400000).getUTCDay();
+  const monday = day - ((weekday + 6) % 7);
+  if (granularity === 'week') {
+    return dateFromUtcDay(monday);
+  }
+  const anchor = utcDayNumber(TWO_WEEK_ANCHOR);
+  return dateFromUtcDay(anchor + Math.floor((day - anchor) / 14) * 14);
+}
+
+function bucketLogs(dates, logs, granularity) {
+  const buckets = [];
+  for (let index = 0; index < dates.length; index += 1) {
+    const date = dates[index];
+    const key = bucketKey(date, granularity);
+    let bucket = buckets[buckets.length - 1];
+    if (!bucket || bucket.key !== key) {
+      bucket = { key, start: date, end: date, logs: [] };
+      buckets.push(bucket);
+    }
+    bucket.end = date;
+    bucket.logs.push(logs[index]);
+  }
+  return buckets;
+}
+// harn:end granularity-bucketing-api
+
 function compatibilityLimits(windows, corrected) {
   const derived = windowMetrics(windows);
   const fiveHour = derived.filter((sample) => sample.kind === '5h');
@@ -221,13 +278,16 @@ function compatibilityLimits(windows, corrected) {
 // harn:assume rolling-status-metrics-api ref=ui-data-builder
 function buildUiData(options = {}) {
   const visibleDays = parseDays(options.days);
+  const granularity = parseGranularity(options.granularity);
   const availableDates = listDailyDates(options);
   const asOf = options.asOf || availableDates[availableDates.length - 1] || localDate();
   const dates = calendarDates(asOf, visibleDays);
   const logs = dates.map((date) => readDailyLog(date, options));
+  const buckets = bucketLogs(dates, logs, granularity);
+  const bucketedLogs = buckets.map((bucket) => ({ ...aggregateRootLogs(bucket.logs), date: bucket.start }));
   const actualDates = new Set(availableDates);
   const activityDays = dates.filter((date) => actualDates.has(date)).length;
-  const series = buildSeries(logs);
+  const series = buildSeries(bucketedLogs);
 
   const rollingDates = calendarDates(asOf, 28);
   const rollingLogs = rollingDates.map((date) => readDailyLog(date, options));
@@ -245,7 +305,7 @@ function buildUiData(options = {}) {
 
   const byModel = {};
   for (const { id } of models) {
-    const modelSlices = logs.map((log) => logForModel(log.date, log.by_model[id]));
+    const modelSlices = buckets.map((bucket) => logForModel(bucket.start, aggregateModelLogs(bucket.logs, id)));
     const currentModel = aggregateModelLogs(currentLogs, id);
     const previousModel = aggregateModelLogs(previousLogs, id);
     const rolling = rollingMetrics(currentModel, previousModel);
@@ -273,15 +333,16 @@ function buildUiData(options = {}) {
 
   return {
     apiVersion: 2,
-    range: { days: visibleDays, granularity: 'day', timezone: 'local', start: dates[0], end: dates[dates.length - 1] },
+    range: { days: visibleDays, granularity, timezone: 'local', start: dates[0], end: dates[dates.length - 1] },
     N: activityDays,
-    days: dates,
+    days: buckets.map((bucket) => bucket.start),
+    buckets: buckets.map(({ key, start, end }) => ({ key, start, end })),
     models,
     account: {
       series: {
         sessions: series.activity.sessions,
-        permissionRequests: logs.map((log) => num(log.totals.permission_requests)),
-        permissionDenied: logs.map((log) => num(log.totals.permission_denied)),
+        permissionRequests: bucketedLogs.map((log) => num(log.totals.permission_requests)),
+        permissionDenied: bucketedLogs.map((log) => num(log.totals.permission_denied)),
         interrupts: series.activity.interrupts,
         compactions: series.activity.compactions,
       },
@@ -300,4 +361,7 @@ module.exports = {
   buildUiData,
   calendarDates,
   rollingMetrics,
+  bucketKey,
+  bucketLogs,
+  parseGranularity,
 };

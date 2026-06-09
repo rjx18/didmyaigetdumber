@@ -1,0 +1,68 @@
+id: metrics-v3-phase-b7-bucketing
+title: Add server-side day-and-coarser metric bucketing
+assumptions:
+  retire: []
+  create:
+    - id: granularity-bucketing-api
+      title: Granularity bucketing API
+      statement: The GET /api/ui endpoint validates granularity as day, week, 2w, or
+        month and returns local-calendar buckets whose volumes are summed and
+        whose rates, shares, and timings are re-derived from summed raw
+        components, with ISO Monday weeks, a documented fixed two-week anchor,
+        and explicit partial bucket boundaries.
+      reason: Dashboard charts need correct coarser time buckets without exposing raw
+        rebucketing components to the browser.
+      depends_on:
+        - rolling-status-metrics-api
+        - metric-aggregation-core
+  reviewed:
+    - id: rolling-status-metrics-api
+      outcome: unchanged
+      reason: Model views, rolling status, compatibility aliases, and limits remain
+        available for every supported granularity.
+    - id: local-dashboard-server
+      outcome: unchanged
+      reason: The local server adds query validation while retaining the same route.
+    - id: local-aggregate-privacy
+      outcome: unchanged
+      reason: Bucketed API output remains aggregate-only.
+anchors:
+  granularity-bucketing-api:
+    bucket-builder:
+      action: change
+      reason: Add local-calendar bucket grouping and raw aggregation.
+    server-granularity:
+      action: change
+      reason: Validate and pass the granularity query parameter.
+    bucket-tests:
+      action: change
+      reason: Verify week, 2w, month, partial, and rate re-derivation behavior.
+    server-granularity-tests:
+      action: change
+      reason: Verify invalid granularity returns 400.
+    progress-phase-b7:
+      action: change
+      reason: Track B7 completion.
+  rolling-status-metrics-api:
+    ui-data-builder:
+      action: change
+      reason: Build series from requested raw-log buckets while leaving rolling
+        windows daily.
+    server-ui-api:
+      action: change
+      reason: Pass validated granularity into the UI builder.
+    ui-data-tests:
+      action: change
+      reason: Extend UI payload tests for coarser buckets.
+  local-dashboard-server:
+    server-http:
+      action: change
+      reason: Return a clear 400 for invalid granularity.
+files:
+  - src/ui-data.js
+  - src/server.js
+  - test/ui-data.test.js
+  - test/server.test.js
+  - metrics-v3-progress.md
+applied:
+  applied_at: 2026-06-09T01:38:32.380Z
