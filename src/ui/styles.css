@@ -280,6 +280,14 @@ body {
   background: var(--ink); border-radius: 2px;
 }
 
+.gran { display: inline-flex; gap: 2px; margin-top: 12px; border: 1px solid var(--hair); border-radius: 8px; padding: 2px; }
+.gran-btn {
+  appearance: none; border: 0; background: none; cursor: pointer; font-family: var(--mono);
+  font-size: 11px; color: var(--muted); padding: 4px 10px; border-radius: 6px; transition: color 0.15s, background 0.15s;
+}
+.gran-btn:hover { color: var(--ink); }
+.gran-btn.on { color: var(--strong); background: var(--raise); }
+
 /* ---------- section detail ---------- */
 .detail { scroll-margin-top: 72px; }
 .page-section { padding-top: 34px; }

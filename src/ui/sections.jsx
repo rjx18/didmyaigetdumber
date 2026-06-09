@@ -189,6 +189,33 @@ const SECTIONS = {
 
 const NAV = ["friction", "activity", "tokens", "cache", "reasoning", "tools", "timing", "limits"];
 
+// harn:assume ui-granularity-selector ref=ui-granularity-control
+// Detailed-charts granularity. Driven by the `granularity` URL param (the same way
+// `days` is) and applied by reloading so the server re-buckets the series; the
+// 14-day rolling KPIs/status are unaffected. `1h` is bounded server-side to the
+// hourly retention window.
+const GRANULARITIES = ["1h", "day", "week", "2w", "month"];
+
+function setGranularity(g) {
+  const p = new URLSearchParams(window.location.search);
+  if (g === "day") p.delete("granularity"); else p.set("granularity", g);
+  const qs = p.toString();
+  window.location.search = qs ? "?" + qs : "";
+}
+
+function GranularityControl() {
+  const current = (D.range && D.range.granularity) || "day";
+  return (
+    <div className="gran" role="group" aria-label="Chart granularity">
+      {GRANULARITIES.map((g) => (
+        <button key={g} className={"gran-btn" + (current === g ? " on" : "")}
+          aria-pressed={current === g} onClick={() => current !== g && setGranularity(g)}>{g}</button>
+      ))}
+    </div>
+  );
+}
+// harn:end ui-granularity-selector
+
 function SubNav({ active, onChange }) {
   return (
     <div className="subnav-wrap">
@@ -199,6 +226,7 @@ function SubNav({ active, onChange }) {
             className="sx" onClick={() => onChange(id)}>{SECTIONS[id].title}</button>
         ))}
       </nav>
+      <GranularityControl />
     </div>
   );
 }

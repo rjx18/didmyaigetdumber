@@ -1,0 +1,34 @@
+id: frontend-fe-e-granularity
+title: Add a granularity selector to the detailed section
+assumptions:
+  retire: []
+  create:
+    - id: ui-granularity-selector
+      title: UI granularity selector re-buckets the detailed charts
+      statement: The dashboard detailed section offers a granularity control (`1h`,
+        `day`, `week`, `2w`, `month`) that reflects and sets the `granularity`
+        URL parameter and reloads to re-fetch server-bucketed series from
+        `/api/ui`, defaulting to `day`; the rolling summary KPIs and the status
+        verdict stay on the backend's fixed 14-day window and are not changed by
+        the control, and `1h` is bounded by the server to the hourly retention
+        window.
+      reason: The backend serves day/week/2w/month re-bucketing and a bounded 1h
+        range, but no UI exposes it; switching buckets must re-fetch
+        server-aggregated series rather than averaging daily rates client-side.
+      depends_on:
+        - ui-live-data-binding
+        - granularity-bucketing-api
+        - sub-daily-hourly-storage
+  reviewed: []
+anchors:
+  ui-granularity-selector:
+    ui-granularity-control:
+      action: change
+      reason: Add the GranularityControl component and the URL-param navigation that
+        re-fetches server-bucketed series.
+files:
+  - src/ui/sections.jsx
+  - src/ui/styles.css
+  - frontend-dashboard-progress.md
+applied:
+  applied_at: 2026-06-09T03:29:28.792Z

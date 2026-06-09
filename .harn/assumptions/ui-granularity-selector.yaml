@@ -1,0 +1,15 @@
+id: ui-granularity-selector
+hash: a-77e23222f16e
+title: UI granularity selector re-buckets the detailed charts
+state: active
+statement: The dashboard detailed section offers a granularity control (`1h`,
+  `day`, `week`, `2w`, `month`) that reflects and sets the `granularity` URL
+  parameter and reloads to re-fetch server-bucketed series from `/api/ui`,
+  defaulting to `day`; the rolling summary KPIs and the status verdict stay on
+  the backend's fixed 14-day window and are not changed by the control, and `1h`
+  is bounded by the server to the hourly retention window.
+depends_on:
+  - ui-live-data-binding
+  - granularity-bucketing-api
+  - sub-daily-hourly-storage
+created_by: frontend-fe-e-granularity
